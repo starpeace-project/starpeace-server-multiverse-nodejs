@@ -1,0 +1,23 @@
+language: node_js
+node_js:
+    - "12"
+
+notifications:
+  email:
+    on_success: never
+    on_failure: always
+
+before_install:
+  - npm update -g npm
+  - npm install -g grunt-cli
+
+install:
+    - npm install
+    - npm rebuild
+
+cache:
+  directories:
+    - node_modules
+
+script:
+  - npm run test

@@ -1,0 +1,46 @@
+{
+  "name": "@starpeace/starpeace-server-multiverse-nodejs",
+  "version": "0.1.0",
+  "description": "STARPEACE Multiverse game-play and simulation server created with NodeJS",
+  "author": "starpeace-project",
+  "license": "MIT",
+  "pkg": {
+    "scripts": ["dist/**/*.js", "assets/**/*.json"],
+    "assets": ["assets/**/*.bmp", "../assets/**/*.bmp"]
+  },
+  "bin": {
+    "setup": "dist/setup.js"
+  },
+  "devDependencies": {
+    "@starpeace/starpeace-assets": "git://github.com/starpeace-project/starpeace-assets.git#v0.2.6",
+    "grunt": "^1.2.0",
+    "grunt-contrib-clean": "^2.0.0",
+    "grunt-contrib-coffee": "^2.1.0",
+    "grunt-contrib-copy": "^1.0.0",
+    "grunt-run": "^0.8.1",
+    "matchdep": "*",
+    "mocha": "^8.0.1"
+  },
+  "dependencies": {
+    "@starpeace/starpeace-assets-types": "git://github.com/starpeace-project/starpeace-assets-types.git#v0.2.13",
+    "async-exit-hook": "^2.0.1",
+    "bcrypt": "^5.0.0",
+    "body-parser": "^1.19.0",
+    "compression": "^1.7.4",
+    "cookie-parser": "^1.4.5",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "express-session": "^1.17.1",
+    "inquirer": "^7.3.0",
+    "lodash": "^4.17.15",
+    "memcached": "^2.2.2",
+    "memorystore": "^1.6.2",
+    "nodecached": "^0.2.0",
+    "passport": "^0.4.1",
+    "passport-local": "^1.0.0",
+    "passport-remember-me": "0.0.1",
+    "pkg": "^4.4.9",
+    "sqlite3": "^5.0.0",
+    "uuid": "^8.2.0"
+  }
+}
