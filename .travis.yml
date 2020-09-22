@@ -9,6 +9,7 @@ notifications:
 
 before_install:
   - sudo apt-get update
+  - sudo apt-get install libzmq3-dev
   - npm update -g npm
   - npm install -g grunt-cli
 
