@@ -14,7 +14,7 @@ before_install:
   - npm install -g grunt-cli
 
 install:
-  - npm install zeromq@6.0.0-beta.6 --zmq-shared
+  - npm install zeromq@6.0.0-beta.5 --zmq-shared
   - npm install
   - npm rebuild
 
