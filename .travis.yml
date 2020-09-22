@@ -5,7 +5,7 @@ node_js:
 notifications:
   email:
     on_success: never
-    on_failure: always
+    on_failure: never
 
 before_install:
   - sudo apt-get update
@@ -14,7 +14,7 @@ before_install:
 
 install:
   - sudo apt-get install -y libtool pkg-config build-essential autoconf automake
-  - sudo apt-get install -y libzmq3-dev
+  - sudo apt-get install -y libzmq
   - npm install
   - npm rebuild
 
