@@ -13,8 +13,7 @@ before_install:
   - npm install -g grunt-cli
 
 install:
-  - sudo apt-get install -y libtool pkg-config build-essential autoconf automake
-  - sudo apt-get install -y libzmq
+  - npm install zeromq@6.0.0-beta.6 --zmq-shared
   - npm install
   - npm rebuild
 
