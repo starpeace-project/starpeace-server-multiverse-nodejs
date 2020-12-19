@@ -55,7 +55,7 @@ module.exports = class GalaxyApi
 
       res.json(response)
     catch err
-      console.log err
+      console.error err
       res.status(500).json(err)
 
 
@@ -76,7 +76,7 @@ module.exports = class GalaxyApi
         res.json({ id: user.id, username: user.username, name: user.name, accessToken: accessToken, refreshToken: token, corporations })
 
       catch err
-        console.log err
+        console.error err
         res.status(500).json(err)
     )
 
@@ -94,7 +94,7 @@ module.exports = class GalaxyApi
         .then (user) =>
           @loginUser(req, res, next, user, true)
         .catch (err) ->
-          console.log err
+          console.error err
           res.status(500).json(err)
 
     else
@@ -111,5 +111,5 @@ module.exports = class GalaxyApi
         req.logout()
         res.status(200).json({})
       .catch (err) ->
-        console.log err
+        console.error err
         res.status(500).json(err || {})

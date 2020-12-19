@@ -4,6 +4,7 @@ Corporation = require('../corporation/corporation')
 CorporationCache = require('../corporation/corporation-cache')
 CorporationStore = require('../store/corporation/corporation-store')
 
+
 Utils = require('../utils/utils')
 
 module.exports = class CorporationManager

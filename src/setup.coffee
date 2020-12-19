@@ -14,8 +14,7 @@ Logger = require('./utils/logger')
 Utils = require('./utils/utils')
 FileUtils = require('./utils/file-utils')
 
-SetupPlanetMetadata = require('./setup/setup-planet-metadata')
-SetupTowns = require('./setup/setup-towns')
+SetupPlanet = require('./setup/setup-planet')
 
 
 determineAction = () ->
@@ -75,7 +74,6 @@ else
 
 # determineAction()
 for planet in galaxyConfig.planets
-  new SetupPlanetMetadata().export(configurations, planet.id)
-  new SetupTowns(Math.floor(Math.random() * 2)).exportTowns(configurations, planet.id, planet.mapId)
+  new SetupPlanet().export(configurations, planet)
 
 #fs.writeFileSync('./config/server.config.json', JSON.stringify(config))

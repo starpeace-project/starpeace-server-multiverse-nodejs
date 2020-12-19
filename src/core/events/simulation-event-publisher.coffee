@@ -22,6 +22,4 @@ module.exports = class SimulationEventPublisher
     console.log('[Simulation Event Publisher] Stopped')
 
   sendEvent: (planetId, day) ->
-    new Promise (resolve, reject) =>
-      await @publisherSocket.send(['SIMULATION', JSON.stringify({ planetId: planetId, payload: { date: day.format() } })]) if @bound
-      resolve()
+    await @publisherSocket.send(['SIMULATION', JSON.stringify({ planetId, payload: { planetTime: day.toISO() } })]) if @bound

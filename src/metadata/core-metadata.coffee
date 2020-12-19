@@ -15,6 +15,7 @@ module.exports = class CoreMetadata
       industryCategories: _.map(@industryCategories, (i) -> i.toJson())
       industryTypes: _.map(@industryTypes, (i) -> i.toJson())
       levels: _.map(@levels, (i) -> i.toJson())
+      rankingTypes: @rankingTypes
       resourceTypes: _.map(@resourceTypes, (i) -> i.toJson())
       resourceUnits: _.map(@resourceUnits, (i) -> i.toJson())
       seals: _.map(@seals, (i) -> i.toJson())
@@ -26,6 +27,7 @@ module.exports = class CoreMetadata
     metadata.industryCategories = _.map(json.industryCategories, STARPEACE.industry.IndustryCategory.fromJson)
     metadata.industryTypes = _.map(json.industryTypes, STARPEACE.industry.IndustryType.fromJson)
     metadata.levels = _.map(json.levels, STARPEACE.industry.Level.fromJson)
+    metadata.rankingTypes = json.rankingTypes
     metadata.resourceTypes = _.map(json.resourceTypes, STARPEACE.industry.ResourceType.fromJson)
     metadata.resourceUnits = _.map(json.resourceUnits, STARPEACE.industry.ResourceUnit.fromJson)
     metadata.seals = _.map(json.seals, STARPEACE.seal.CompanySeal.fromJson)

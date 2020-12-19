@@ -1,7 +1,7 @@
 _ = require('lodash')
 
 module.exports = class PlanetApi
-  constructor: (@galaxyManager, @corporationManager, @planetManager, @tycoonManager) ->
+  constructor: (@galaxyManager, @simulationStates, @corporationManager, @planetManager, @rankingManager, @tycoonManager) ->
 
   registerVisa: () -> (req, res, next) =>
     isVisitor = req.body.identityType == 'visitor'
@@ -22,7 +22,7 @@ module.exports = class PlanetApi
       return res.status(500) unless visa?
       res.json(visa.toJsonApi())
     catch err
-      console.log err
+      console.error err
       res.status(500).json(err || {})
 
   verifyVisa: (requireTycoon) -> (req, res, next) =>
@@ -39,20 +39,20 @@ module.exports = class PlanetApi
         req.visa = visa
         next()
       .catch (err) ->
-        console.log err
+        console.error err
         res.status(500).json(err || {})
 
   getEvents: () -> (req, res, next) =>
     return res.status(400) unless req.params.planetId?
     return res.status(404) unless @galaxyManager.forPlanet(req.params.planetId)?
+    return res.status(404) unless @simulationStates[req.params.planetId]?
     return res.status(403) unless req.visa? && req.visa.planetId == req.params.planetId
 
     # FIXME: TODO: hookup event state
-    # 'winter', 'spring', 'summer', 'fall'
     res.json({
       planetId: req.params.planetId
-      date: '2235-01-01'
-      season: 'winter'
+      time: @simulationStates[req.params.planetId].planetTime.toISO()
+      season: @simulationStates[req.params.planetId].season()
       buildingEvents: []
       tycoonEvents: []
     })
@@ -78,7 +78,33 @@ module.exports = class PlanetApi
 
       res.json(online)
     catch err
-      console.log err
+      console.error err
+      res.status(500).json(err || {})
+
+  getRankings: () -> (req, res, next) =>
+    return res.status(400) unless req.params.planetId? && req.params.rankingTypeId?
+    return res.status(404) unless @galaxyManager.forPlanet(req.params.planetId)?
+    return res.status(403) unless req.visa? && req.visa.planetId == req.params.planetId
+
+    try
+      rankings = await @rankingManager.forId(req.params.planetId, req.params.rankingTypeId)
+      rankingsJson = []
+      for ranking in (rankings || [])
+        tycoon = await @tycoonManager.forId(ranking.tycoonId)
+        corporation = await @corporationManager.forId(ranking.corporationId)
+        continue unless tycoon? && corporation?
+        rankingsJson.push {
+          rank: ranking.rank
+          value: ranking.value
+          tycoonId: tycoon.id
+          tycoonName: tycoon.name
+          corporationId: corporation.id
+          corporationName: corporation.name
+        }
+
+      res.json(rankingsJson)
+    catch err
+      console.error err
       res.status(500).json(err || {})
 
   getTowns: () -> (req, res, next) =>
@@ -90,5 +116,5 @@ module.exports = class PlanetApi
       towns = await @planetManager.listTowns(req.params.planetId)
       res.json(towns)
     catch err
-      console.log err
+      console.error err
       res.status(500).json(err || {})

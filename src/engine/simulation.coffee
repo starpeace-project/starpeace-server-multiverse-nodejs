@@ -1,12 +1,9 @@
-moment = require('moment')
 
 ModelEventClient = require('../core/events/model-event-client')
 
 module.exports = class Simulation
-  constructor: (@planetId, @eventPublisher) ->
+  constructor: (@planetId, @eventPublisher, @simulationState) ->
     @simulationRunning = false
-
-    @day = moment('2200-01-01')
 
   currentMs: () ->
     hrTime = process.hrtime()
@@ -22,18 +19,24 @@ module.exports = class Simulation
     @simulationRunning = false
 
   mainLoop: () ->
+    unless @simulationRunning
+      console.log "[Simulation] Engine stopped"
+      return
+
+    unless @simulationState.planetTime?
+      console.log 'Simulation not yet loaded'
+      setTimeout((=> @mainLoop()), 1000)
+      return
+
     startMs = @currentMs()
 
-    @day = @day.add(1, 'hours')
+    @simulationState.planetTime = @simulationState.planetTime.plus({ hours: 1 })
     endMs = @currentMs()
 
     durationMs = Math.round(endMs - startMs)
     toWait = if durationMs > 1000 then 0 else (1000 - durationMs)
     #console.log "last tick took #{durationMs}, will wait #{toWait} milliseconds..."
 
-    @eventPublisher.sendEvent(@planetId, @day)
+    @eventPublisher.sendEvent(@planetId, @simulationState.planetTime)
 
-    if @simulationRunning
-      setTimeout((=> @mainLoop()), toWait)
-    else
-      console.log "[Simulation] Engine stopped"
+    setTimeout((=> @mainLoop()), toWait)

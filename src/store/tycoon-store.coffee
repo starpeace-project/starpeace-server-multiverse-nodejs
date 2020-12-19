@@ -1,3 +1,4 @@
+_ = require('lodash')
 sqlite3 = require('sqlite3')
 
 Tycoon = require('../tycoon/tycoon')
@@ -15,6 +16,12 @@ module.exports = class TycoonStore
       @db.close (err) ->
         return reject(err) if err
         resolve()
+
+  all: () ->
+    new Promise (resolve, reject) =>
+      @db.all "SELECT content FROM tycoons", [], (err, rows) ->
+        return reject(err) if err
+        resolve(_.map(_.filter(rows, (row) -> row?.content?), (row) -> Tycoon.fromJson(JSON.parse(row.content))))
 
   get: (id) ->
     new Promise (resolve, reject) =>

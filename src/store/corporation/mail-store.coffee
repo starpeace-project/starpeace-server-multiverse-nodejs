@@ -35,3 +35,9 @@ module.exports = class MailStore
       @db.run "INSERT OR REPLACE INTO mail (id, corporationId, content) VALUES (?, ?, ?)", [mail.id, mail.corporationId, JSON.stringify(mail.toJson())], (err, row) ->
         return reject(err) if err
         resolve(mail)
+
+  delete: (mailId) ->
+    new Promise (resolve, reject) =>
+      @db.run "DELETE FROM mail WHERE id = ?", [mailId], (err, row) ->
+        return reject(err) if err
+        resolve(mailId)

@@ -5,6 +5,7 @@ Bookmark = require('../../corporation/bookmark')
 Company = require('../../company/company')
 Corporation = require('../../corporation/corporation')
 Invention = require('../../company/invention')
+Mail = require('../../corporation/mail')
 Tycoon = require('../../tycoon/tycoon')
 Visa = require('../../tycoon/visa')
 
@@ -139,6 +140,24 @@ module.exports = class ModelEventServer
         inventionId = await @inventionStores[request.payload.planetId].updateStatus(request.payload.companyId, request.payload.inventionId, 'SELLING')
         await @replySocket.send(JSON.stringify({ inventionId }))
         await @publisherSocket.send(['INVENTION:SELL', JSON.stringify({ planetId: request.payload.planetId, companyId: invention.companyId, id: invention.id })])
+
+      else if request.type == 'MAIL:SEND'
+        mail = await @mailStores[request.payload.planetId].set(Mail.fromJson(request.payload.mail))
+        corporation = await @corporationStores[request.payload.planetId].get(mail.corporationId)
+        corporation.lastMailAt = mail.sentAt
+        corporation = await @corporationStores[request.payload.planetId].set(corporation)
+        await @replySocket.send(JSON.stringify({ mail }))
+        await @publisherSocket.send(['CORPORATION:UPDATE', JSON.stringify({ planetId: corporation.planetId, id: corporation.id })])
+
+      else if request.type == 'MAIL:MARK_READ'
+        mail = await @mailStores[request.payload.planetId].get(request.payload.mailId)
+        mail = if mail? then (await @mailStores[request.payload.planetId].set(mail.markRead())) else null
+        await @replySocket.send(JSON.stringify(if mail? then { mailId: mail.id } else { }))
+
+      else if request.type == 'MAIL:DELETE'
+        mail = await @mailStores[request.payload.planetId].get(request.payload.mailId)
+        mailId = if mail? then (await @mailStores[request.payload.planetId].delete(mail.id)) else null
+        await @replySocket.send(JSON.stringify(if mailId? then { mailId } else { }))
 
       else
         console.log "unknown model server request type #{request.type}"

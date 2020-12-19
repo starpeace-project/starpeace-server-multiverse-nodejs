@@ -1,7 +1,7 @@
 _ = require('lodash')
 
 module.exports = class CompanyApi
-  constructor: (@galaxyManager, @companyManager, @inventionManager) ->
+  constructor: (@galaxyManager, @buildingManager, @companyManager, @inventionManager, @planetManager) ->
 
   createCompany: () -> (req, res, next) =>
     return res.status(400).json({ code: 'INVALID_PLANET' }) unless req.params.planetId? && @galaxyManager.forPlanet(req.params.planetId)?
@@ -23,7 +23,26 @@ module.exports = class CompanyApi
 
       res.json(company.toJsonApi([]))
     catch err
-      console.log err
+      console.error err
+      res.status(500).json(err || {})
+
+  getTownCompanies: () -> (req, res, next) =>
+    return res.status(400) unless req.params.planetId? && req.params.townId?
+    return res.status(404) unless @galaxyManager.forPlanet(req.params.planetId)?
+    return res.status(403) unless req.visa? && req.visa.planetId == req.params.planetId
+    try
+      town = _.find(await @planetManager.listTowns(req.params.planetId), (t) -> t.id == req.params.townId)
+      return res.status(404) unless town?
+
+      companiesJson = []
+      for id in _.uniq(_.map(await @buildingManager.forTown(town.id), 'companyId'))
+        company = @companyManager.forId(id)
+        continue unless company?
+        companiesJson.push(company.toJsonApi([]))
+
+      res.json(companiesJson)
+    catch err
+      console.error err
       res.status(500).json(err || {})
 
 
@@ -54,7 +73,7 @@ module.exports = class CompanyApi
         completedIds: completedIds
       })
     catch err
-      console.log err
+      console.error err
       res.status(500).json(err || {})
 
   researchInvention: () -> (req, res, next) =>
@@ -75,7 +94,7 @@ module.exports = class CompanyApi
       Invention = await @inventionManager.startResearch(company.planetId, company.id, req.params.inventionId)
       res.json(Invention.toJson())
     catch err
-      console.log err
+      console.error err
       res.status(500).json(err || {})
 
   sellInvention: () -> (req, res, next) =>
@@ -94,5 +113,5 @@ module.exports = class CompanyApi
       inventionId = await @inventionManager.sellResearch(company.planetId, company.id, req.params.inventionId)
       res.json({ inventionId })
     catch err
-      console.log err
+      console.error err
       res.status(500).json(err || {})

@@ -5,6 +5,7 @@ Bookmark = require('../../corporation/bookmark')
 Company = require('../../company/company')
 Corporation = require('../../corporation/corporation')
 Invention = require('../../company/invention')
+Mail = require('../../corporation/mail')
 Tycoon = require('../../tycoon/tycoon')
 Visa = require('../../tycoon/visa')
 
@@ -105,9 +106,21 @@ module.exports = class ModelEventClient
       await @requestSocket.send(JSON.stringify({ type: 'RESEARCH:START', payload: { planetId, invention: invention.toJson() } }))
       [result] = await @requestSocket.receive()
       resolve(Invention.fromJson(JSON.parse(result).invention))
-
   sellResearch: (planetId, companyId, inventionId) ->
     new Promise (resolve, reject) =>
       await @requestSocket.send(JSON.stringify({ type: 'RESEARCH:SELL', payload: { planetId, companyId, inventionId } }))
       [result] = await @requestSocket.receive()
       resolve(JSON.parse(result).inventionId)
+
+  sendMail: (planetId, mail) ->
+    await @requestSocket.send(JSON.stringify({ type: 'MAIL:SEND', payload: { planetId, mail: mail.toJson() } }))
+    [result] = await @requestSocket.receive()
+    Mail.fromJson(JSON.parse(result).mail)
+  markReadMail: (planetId, mailId) ->
+    await @requestSocket.send(JSON.stringify({ type: 'MAIL:MARK_READ', payload: { planetId, mailId } }))
+    [result] = await @requestSocket.receive()
+    JSON.parse(result).mailId
+  deleteMail: (planetId, mailId) ->
+    await @requestSocket.send(JSON.stringify({ type: 'MAIL:DELETE', payload: { planetId, mailId } }))
+    [result] = await @requestSocket.receive()
+    JSON.parse(result).mailId

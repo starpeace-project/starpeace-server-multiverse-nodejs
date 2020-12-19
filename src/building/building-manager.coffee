@@ -30,3 +30,5 @@ module.exports = class BuildingManager
     new Promise (resolve, reject) => resolve(@cache.forChunk(planetId, chunkX, chunkY))
   forCompany: (companyId) ->
     new Promise (resolve, reject) => resolve(@cache.forCompanyId(companyId))
+  forTown: (townId) ->
+    new Promise (resolve, reject) => resolve(@cache.forTownId(townId))

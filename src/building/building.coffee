@@ -1,8 +1,9 @@
 _ = require('lodash')
 
 module.exports = class Building
-  constructor: (@id, @tycoonId, @corporationId, @companyId) ->
+  constructor: () ->
     @definitionId = null
+    @townId = null
     @name = null
     @mapX = 0
     @mapY = 0
@@ -42,7 +43,6 @@ module.exports = class Building
 
 
   doAction: () ->
-
     sinkCapacity = 0
     for connection in [] # outputs
       sinkCapacity += connection.sinkCapacity
@@ -66,6 +66,7 @@ module.exports = class Building
       corporationId: @corporationId
       companyId: @companyId
       definitionId: @definitionId
+      townId: @townId
       name: @name
       mapX: @mapX
       mapY: @mapY
@@ -73,7 +74,12 @@ module.exports = class Building
     }
 
   @fromJson: (json) ->
-    metadata = new Building(json.id, json.tycoonId, json.corporationId, json.companyId)
+    metadata = new Building()
+    metadata.id = json.id
+    metadata.tycoonId = json.tycoonId
+    metadata.corporationId = json.corporationId
+    metadata.companyId = json.companyId
+    metadata.townId = json.townId
     metadata.definitionId = json.definitionId
     metadata.name = json.name
     metadata.mapX = json.mapX

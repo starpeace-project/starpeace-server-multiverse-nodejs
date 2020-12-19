@@ -99,7 +99,7 @@ module.exports = class SetupTowns
       portal: @planBuilding(townhallPosition, townhallImage, portalPosition, portalImage)
     }
 
-  exportTowns: (configurations, planetId, mapId) ->
+  export: (configurations, planetId, mapId) ->
     buildingStore = new BuildingStore(false, planetId)
     townStore = new TownStore(false, planetId)
     towns = await townStore.all()

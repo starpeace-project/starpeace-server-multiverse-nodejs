@@ -17,14 +17,14 @@ authenticate = (req, res, next) ->
     )
   )(req, res, next)
 
-module.exports = (app, galaxyManager, bookmarkManager, buildingManager, companyManager, corporationManager, inventionManager, mailManager, planetManager, tycoonManager) ->
-  buildingApi = new BuildingApi(galaxyManager, buildingManager, companyManager)
-  companyApi = new CompanyApi(galaxyManager, companyManager, inventionManager)
+module.exports = (app, galaxyManager, simulationStates, bookmarkManager, buildingManager, companyManager, corporationManager, inventionManager, mailManager, planetManager, rankingManager, tycoonManager) ->
+  buildingApi = new BuildingApi(galaxyManager, buildingManager, companyManager, planetManager)
+  companyApi = new CompanyApi(galaxyManager, buildingManager, companyManager, inventionManager, planetManager)
   corporationApi = new CorporationApi(galaxyManager, bookmarkManager, companyManager, corporationManager, mailManager, tycoonManager)
   galaxyApi = new GalaxyApi(galaxyManager, companyManager, corporationManager, tycoonManager)
   metadataApi = new MetadataApi(galaxyManager)
-  planetApi = new PlanetApi(galaxyManager, corporationManager, planetManager, tycoonManager)
-  tycoonApi = new TycoonApi(companyManager, corporationManager, tycoonManager)
+  planetApi = new PlanetApi(galaxyManager, simulationStates, corporationManager, planetManager, rankingManager, tycoonManager)
+  tycoonApi = new TycoonApi(galaxyManager, companyManager, corporationManager, tycoonManager)
 
   app.get('/galaxy/metadata', authenticate, galaxyApi.getMetadata())
   app.post('/galaxy/create', galaxyApi.create())
@@ -43,7 +43,12 @@ module.exports = (app, galaxyManager, bookmarkManager, buildingManager, companyM
   app.post('/planets/:planetId/companies', authenticate, planetApi.verifyVisa(true), companyApi.createCompany())
   app.get('/planets/:planetId/events', authenticate, planetApi.verifyVisa(false), planetApi.getEvents())
   app.get('/planets/:planetId/online', authenticate, planetApi.verifyVisa(false), planetApi.getOnline())
+  app.get('/planets/:planetId/rankings/:rankingTypeId', authenticate, planetApi.verifyVisa(false), planetApi.getRankings())
+  app.get('/planets/:planetId/search/corporations', authenticate, planetApi.verifyVisa(false), corporationApi.getSearch())
+  app.get('/planets/:planetId/search/tycoons', authenticate, planetApi.verifyVisa(false), tycoonApi.getSearch())
   app.get('/planets/:planetId/towns', authenticate, planetApi.verifyVisa(false), planetApi.getTowns())
+  app.get('/planets/:planetId/towns/:townId/buildings', authenticate, planetApi.verifyVisa(false), buildingApi.getTownBuildings())
+  app.get('/planets/:planetId/towns/:townId/companies', authenticate, planetApi.verifyVisa(false), companyApi.getTownCompanies())
 
   app.get('/buildings/:buildingId', authenticate, planetApi.verifyVisa(false), buildingApi.getBuilding())
 
@@ -55,6 +60,9 @@ module.exports = (app, galaxyManager, bookmarkManager, buildingManager, companyM
   app.patch('/corporations/:corporationId/bookmarks', authenticate, planetApi.verifyVisa(true), corporationApi.updateBookmarks())
   app.get('/corporations/:corporationId/cashflow', authenticate, planetApi.verifyVisa(true), corporationApi.getCashflow())
   app.get('/corporations/:corporationId/mail', authenticate, planetApi.verifyVisa(true), corporationApi.getMail())
+  app.post('/corporations/:corporationId/mail', authenticate, planetApi.verifyVisa(true), corporationApi.sendMail())
+  app.put('/corporations/:corporationId/mail/:mailId/mark-read', authenticate, planetApi.verifyVisa(true), corporationApi.markMailRead())
+  app.delete('/corporations/:corporationId/mail/:mailId', authenticate, planetApi.verifyVisa(true), corporationApi.deleteMail())
 
   app.get('/companies/:companyId/buildings', authenticate, planetApi.verifyVisa(false), buildingApi.getCompanyBuildings())
   app.get('/companies/:companyId/inventions', authenticate, planetApi.verifyVisa(true), companyApi.getInventions())

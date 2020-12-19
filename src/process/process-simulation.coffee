@@ -3,13 +3,32 @@ Simulation = require('../engine/simulation')
 ModelEventClient = require('../core/events/model-event-client')
 SimulationEventPublisher = require('../core/events/simulation-event-publisher')
 
+SimulationState = require('../engine/simulation-state')
+SimulationStateStore = require('../store/planet/simulation-state-store')
+
 
 modelEventClient = new ModelEventClient()
 
-eventPublisher = new SimulationEventPublisher(process.argv[3])
-eventPublisher.start()
+planetIndex = parseInt(process.argv[3])
+planetId = process.argv[2]
 
-simulation = new Simulation(process.argv[2], eventPublisher)
-simulation.start()
+stateStore = new SimulationStateStore(true, planetId)
+simulationState = new SimulationState()
 
-process.on('SIGINT', -> Promise.all([eventPublisher.stop(), simulation.stop()]))
+eventPublisher = new SimulationEventPublisher(planetIndex)
+simulation = new Simulation(planetId, eventPublisher, simulationState)
+
+process.on('SIGINT', -> Promise.all([modelEventClient.stop(), stateStore.close(), eventPublisher.stop(), simulation.stop()]))
+
+
+loadData = () ->
+  simulationState.planetTime = await stateStore.getPlanetDate()
+
+loadData()
+  .then () =>
+    eventPublisher.start()
+    simulation.start()
+
+  .catch (err) =>
+    console.error(err)
+    process.exit(1)

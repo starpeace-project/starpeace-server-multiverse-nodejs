@@ -1,4 +1,4 @@
-
+_ = require('lodash')
 
 module.exports = class Visa
   constructor: () ->
@@ -6,10 +6,11 @@ module.exports = class Visa
   isTycoon: () -> @type == 'tycoon'
 
   toJsonApi: () ->
-    {
+    _.pickBy({
       visaId: @id
       identityType: @type
-    }
+      corporationId: @corporationId
+    }, _.identity)
 
   toJson: () ->
     {

@@ -6,10 +6,12 @@ module.exports = class BuildingCache
 
     @idsbyPlanetIdChunkId = {}
     @idsbyCompanyId = {}
+    @idsByTownId = {}
 
   forId: (buildingId) -> @byId[buildingId]
   forChunk: (planetId, chunkX, chunkY) -> _.map(Array.from(@idsbyPlanetIdChunkId[planetId]?["#{chunkX}x#{chunkY}"] || []), (id) => @forId(id))
   forCompanyId: (companyId) -> _.map(Array.from(@idsbyCompanyId[companyId] || []), (id) => @forId(id))
+  forTownId: (townId) -> _.map(Array.from(@idsByTownId[townId] || []), (id) => @forId(id))
 
   update: (planetId, buildingOrBuildings) ->
     if Array.isArray(buildingOrBuildings)
@@ -23,3 +25,6 @@ module.exports = class BuildingCache
 
       @idsbyCompanyId[buildingOrBuildings.companyId] = new Set() unless @idsbyCompanyId[buildingOrBuildings.companyId]?
       @idsbyCompanyId[buildingOrBuildings.companyId].add(buildingOrBuildings.id)
+
+      @idsByTownId[buildingOrBuildings.townId] = new Set() unless @idsByTownId[buildingOrBuildings.townId]?
+      @idsByTownId[buildingOrBuildings.townId].add(buildingOrBuildings.id)

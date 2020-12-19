@@ -2,9 +2,9 @@ _ = require('lodash')
 bcrypt = require('bcrypt')
 
 Tycoon = require('../tycoon/tycoon')
-Visa = require('../tycoon/visa')
-
+TycoonCache = require('../tycoon/tycoon-cache')
 TycoonStore = require('../store/tycoon-store')
+Visa = require('../tycoon/visa')
 VisaStore = require('../store/session/visa-store')
 
 Utils = require('../utils/utils')
@@ -14,11 +14,20 @@ module.exports = class TycoonManager
     @store = new TycoonStore(true)
     @visaStore = new VisaStore(true)
 
+    @cache = new TycoonCache()
+    @loadCache()
+
+  loadCache: () ->
+    @store.all()
+      .then (tycoons) => @cache.update(tycoons)
+      .catch (err) => setTimeout((=> @loadCache()), 500)
+  updateCache: (tycoonId) ->
+    @store.get(tycoonId)
+      .then (tycoon) => @cache.update(tycoon) if tycoon?
+      .catch (err) => setTimeout((=> @updateCache(tycoonId)), 500)
+
   close: () ->
     Promise.all([@store.close(), @visaStore.close()])
-
-  updateCache: (tycoonId) ->
-    console.log 'update tycoon cache'
 
   create: (username, password) ->
     new Promise (resolve, reject) =>
@@ -40,8 +49,12 @@ module.exports = class TycoonManager
             )
         .catch reject
 
-  forId: (id) -> @store.get(id)
-  forUsername: (username) -> @store.forUsername(username)
+  all: () ->
+    new Promise (resolve, reject) => resolve(@cache.all())
+  forId: (tycoonId) ->
+    new Promise (resolve, reject) => resolve(@cache.forId(tycoonId))
+  forUsername: (username) ->
+    new Promise (resolve, reject) => resolve(@cache.forUsername(username))
 
   forUsernamePassword: (username, password) ->
     new Promise (resolve, reject) =>
