@@ -51,7 +51,7 @@
     "luxon": "^1.25.0",
     "memorystore": "^1.6.4",
     "morgan": "^1.10.0",
-    "passport": "^0.4.1",
+    "passport": "^0.6.0",
     "passport-jwt": "^4.0.0",
     "passport-local": "^1.0.0",
     "pkg": "^4.4.9",
