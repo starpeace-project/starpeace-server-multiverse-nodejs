@@ -1,6 +1,6 @@
 {
   "name": "@starpeace/starpeace-server-multiverse-nodejs",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "STARPEACE Multiverse game-play and simulation server created with NodeJS",
   "author": "starpeace-project",
   "license": "MIT",
@@ -8,6 +8,7 @@
     "type": "git",
     "url": "git://github.com/starpeace-project/starpeace-server-multiverse-nodejs.git"
   },
+  "type": "commonjs",
   "pkg": {
     "scripts": [
       "dist/**/*.js",
@@ -18,45 +19,69 @@
     ]
   },
   "bin": {
-    "server": "dist/index.js"
+    "planet-server": "dist/planet-server.js",
+    "galaxy-server": "dist/galaxy-server.js"
   },
   "scripts": {
-    "prepare": "grunt",
-    "test": "cross-env grunt && mocha --require coffeescript/register 'test/**/*.test.coffee'"
+    "build": "grunt && tsc -p tsconfig.json",
+    "test": "npm run build && mocha"
   },
   "devDependencies": {
-    "@starpeace/starpeace-assets": "git://github.com/starpeace-project/starpeace-assets.git#v0.2.9",
-    "coffeescript": "^2.5.1",
-    "grunt": "^1.3.0",
-    "grunt-contrib-clean": "^2.0.0",
-    "grunt-contrib-coffee": "^2.1.0",
+    "@babel/core": "^7.20.12",
+    "@babel/preset-env": "^7.20.2",
+    "@tsconfig/node16": "^1.0.3",
+    "@types/bcrypt": "^5.0.0",
+    "@types/compression": "^1.7.2",
+    "@types/cors": "^2.8.13",
+    "@types/fs-extra": "^11.0.1",
+    "@types/lodash": "^4.14.191",
+    "@types/luxon": "^3.2.0",
+    "@types/morgan": "^1.9.4",
+    "@types/node": "^18.11.18",
+    "@types/passport": "^1.0.11",
+    "@types/passport-jwt": "^3.0.8",
+    "@types/passport-local": "^1.0.35",
+    "@types/seedrandom": "^3.0.4",
+    "@types/sharp": "^0.31.1",
+    "@types/sqlite3": "^3.1.8",
+    "@types/uuid": "^9.0.0",
+    "grunt": "^1.5.3",
+    "grunt-contrib-clean": "^2.0.1",
     "grunt-contrib-copy": "^1.0.0",
-    "grunt-run": "^0.8.1",
     "matchdep": "*",
-    "mocha": "^8.2.1"
+    "mocha": "^10.2.0",
+    "typescript": "^4.9.4"
   },
   "dependencies": {
-    "@starpeace/starpeace-assets-types": "git://github.com/starpeace-project/starpeace-assets-types.git#v0.2.16",
-    "bcrypt": "^5.0.0",
-    "body-parser": "^1.19.0",
+    "@starpeace/starpeace-assets": "github:starpeace-project/starpeace-assets.git#v0.2.24",
+    "@starpeace/starpeace-assets-types": "github:starpeace-project/starpeace-assets-types.git#v0.3.1",
+    "@types/inquirer": "^9.0.3",
+    "@types/mocha": "^10.0.1",
+    "bcrypt": "^5.1.0",
+    "body-parser": "^1.20.1",
     "compression": "^1.7.4",
-    "cookie-parser": "^1.4.5",
+    "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "cross-env": "^7.0.3",
-    "express": "^4.17.1",
-    "express-session": "^1.17.1",
-    "inquirer": "^7.3.3",
+    "express": "^4.18.2",
+    "express-winston": "^4.2.0",
+    "fs-extra": "^11.1.0",
+    "inquirer": "^9.1.4",
     "jsonwebtoken": "^9.0.0",
-    "lodash": "^4.17.20",
-    "luxon": "^1.25.0",
-    "memorystore": "^1.6.4",
-    "morgan": "^1.10.0",
-    "passport": "^0.4.1",
-    "passport-jwt": "^4.0.0",
+    "lodash": "^4.17.21",
+    "luxon": "^3.2.1",
+    "memorystore": "^1.6.7",
+    "p-queue": "^6.6.2",
+    "passport": "^0.6.0",
+    "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
-    "pkg": "^4.4.9",
-    "sqlite3": "^5.0.0",
-    "uuid": "^8.3.2",
-    "zeromq": "^6.0.0-beta.6"
+    "pkg": "^5.8.0",
+    "socket.io": "^4.5.4",
+    "sqlite3": "^5.1.4",
+    "ts-node": "^10.9.1",
+    "uuid": "^9.0.0",
+    "winston": "^3.8.2",
+    "winston-daily-rotate-file": "^4.7.1",
+    "zeromq": "^6.0.0-beta.16"
   }
 }

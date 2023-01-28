@@ -1,8 +1,6 @@
 'use strict';
 
 const { exec: createPackage } = require('pkg');
-const fs = require('fs');
-const _ = require('lodash');
 
 module.exports = function(grunt) {
   require('matchdep').filterDev('grunt-*').forEach(grunt.loadNpmTasks);
@@ -12,22 +10,12 @@ module.exports = function(grunt) {
       build: ['bin/', 'dist/']
     },
 
-    coffee: {
-      compile: {
-        expand: true,
-        cwd: "src",
-        src: ['**/*.coffee'],
-        dest: 'dist',
-        ext: '.js'
-      }
-    },
-
     copy: {
-      javascript: {
+      json: {
         files: [
-          {expand: true, cwd: 'src', src: ['**/*.js'], dest: 'dist/'}
+          { expand: true, cwd: 'src', src: ['**/*.json', '!**/tsconfig.json'], dest: 'dist/app/' }
         ],
-      },
+      }
     }
   });
 
@@ -48,8 +36,7 @@ module.exports = function(grunt) {
       });
   });
 
-  grunt.registerTask('build', ['coffee:compile', 'copy:javascript']);
-  grunt.registerTask('package', ['clean', 'build', 'create-executables']);
-  grunt.registerTask('default', ['clean', 'build']);
+  grunt.registerTask('package', ['create-executables']);
+  grunt.registerTask('default', ['clean', 'copy:json']);
 
-}
+};
