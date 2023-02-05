@@ -13,12 +13,13 @@ export default class Planet {
     };
   }
 
-  // season: () ->
-  // return 'winter' if @planetTime.month == 12 || @planetTime.month == 1 || @planetTime.month == 2
-  // return 'spring' if @planetTime.month == 3 || @planetTime.month == 4 || @planetTime.month == 5
-  // return 'summer' if @planetTime.month == 6 || @planetTime.month == 7 || @planetTime.month == 8
-  // return 'fall' if @planetTime.month == 9 || @planetTime.month == 10 || @planetTime.month == 11
-  // 'summer'
+  get season (): string {
+    if (this.time.month == 12 || this.time.month == 1 || this.time.month == 2) return 'winter';
+    if (this.time.month == 3 || this.time.month == 4 || this.time.month == 5) return 'spring';
+    if (this.time.month == 6 || this.time.month == 7 || this.time.month == 8) return 'summer';
+    if (this.time.month == 9 || this.time.month == 10 || this.time.month == 11) return 'fall';
+    return 'summer';
+  }
 
   static fromJson (json: any): Planet {
     return new Planet(

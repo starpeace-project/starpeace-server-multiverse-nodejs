@@ -7,6 +7,7 @@ import passport from 'passport';
 
 import winston from 'winston';
 import expressWinston from 'express-winston';
+import 'winston-daily-rotate-file';
 
 import { Strategy as LocalStrategy } from 'passport-local';
 import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
@@ -22,6 +23,7 @@ import TycoonApi from './tycoon-api';
 import GalaxyManager from '../galaxy-manager';
 import ModelEventClient from '../events/model-event-client';
 import { HttpServerCaches } from '../http-server';
+import CacheByPlanet from '../../planet/cache-by-planet';
 
 import BuildingCache from '../../building/building-cache';
 import CompanyCache from '../../company/company-cache';
@@ -32,8 +34,9 @@ import TownCache from '../../planet/town-cache';
 import TycoonCache from '../../tycoon/tycoon-cache';
 import TycoonManager from '../../tycoon/tycoon-manager';
 import TycoonVisaCache from '../../tycoon/tycoon-visa-cache';
-import CacheByPlanet from '../../planet/cache-by-planet';
 
+
+const DEFAULT_TIMEOUT_IN_MS = 10 * 1000;
 
 export interface ApiCaches {
   tycoon: TycoonCache;
@@ -49,7 +52,7 @@ export interface ApiCaches {
 
 export default class ApiFactory {
 
-  static create (galaxyManager: GalaxyManager, modelEventClient: ModelEventClient, caches: HttpServerCaches): http.Server {
+  static create (logger: winston.Logger, galaxyManager: GalaxyManager, modelEventClient: ModelEventClient, caches: HttpServerCaches): http.Server {
     ApiFactory.configureAuthentication(galaxyManager, new TycoonManager(modelEventClient, caches.tycoon));
 
     const app = express();
@@ -61,15 +64,30 @@ export default class ApiFactory {
     app.use(bodyParser.urlencoded({ extended: false }));
     app.use(bodyParser.json());
     app.use(expressWinston.logger({
-      transports: [new winston.transports.File({ filename: 'access.log' })],
-      format: winston.format.simple(),
+      transports: [new winston.transports.DailyRotateFile({
+        level: 'info',
+        filename: 'logs/access-%DATE%.log',
+        datePattern: 'YYYY-MM-DD-HH',
+        zippedArchive: false,
+        maxSize: '20m',
+        maxFiles: '14d'
+      })],
+      format: winston.format.combine(
+        winston.format.splat(),
+        winston.format.timestamp(),
+        winston.format.printf(({ level, message, timestamp }) => `${timestamp} [${level}]: ${message}`)
+      ),
+      msg: "{{req.method}} {{req.url}} {{res.statusCode}} {{res.responseTime}}ms {{req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress}}",
       meta: false,
-      expressFormat: true
+      metaField: null,
+      expressFormat: false
     }));
     app.use(passport.initialize());
-    ApiFactory.configureRoutes(app, galaxyManager, modelEventClient, caches);
+    ApiFactory.configureRoutes(logger, app, galaxyManager, modelEventClient, caches);
 
-    return http.createServer(app);
+    const server: http.Server = http.createServer(app);
+    server.setTimeout(DEFAULT_TIMEOUT_IN_MS);
+    return server;
   }
 
   static configureAuthentication (galaxyManager: GalaxyManager, tycoonManager: TycoonManager): void {
@@ -97,7 +115,7 @@ export default class ApiFactory {
         },
         async (username: string, password: string, done: any) => {
           return tycoonManager.forUsernamePassword(username, password)
-            .then((account: any) => account ? done(null, account) : done(null, false, { message: 'SIGNIN' }))
+            .then((account: any) => account ? done(null, account) : done(null, false, { message: 'NOT_FOUND' }))
             .catch((err: any) => done(err));
         }
       )
@@ -119,7 +137,7 @@ export default class ApiFactory {
     );
   }
 
-  static configureRoutes (app: express.Express, galaxyManager: GalaxyManager, modelEventClient: ModelEventClient, caches: HttpServerCaches): void {
+  static configureRoutes (logger: winston.Logger, app: express.Express, galaxyManager: GalaxyManager, modelEventClient: ModelEventClient, caches: HttpServerCaches): void {
     const authenticate = (req: express.Request, res: express.Response, next: any): any => {
       return passport.authenticate('jwt', { session: false }, (err: Error, user: any) => {
         if (err || !user) return next();
@@ -129,7 +147,7 @@ export default class ApiFactory {
 
     const buildingApi = new BuildingApi(galaxyManager, modelEventClient, caches);
     const companyApi = new CompanyApi(galaxyManager, modelEventClient, caches);
-    const corporationApi = new CorporationApi(galaxyManager, modelEventClient, caches);
+    const corporationApi = new CorporationApi(logger, galaxyManager, modelEventClient, caches);
     const galaxyApi = new GalaxyApi(galaxyManager, modelEventClient, caches);
     const metadataApi = new MetadataApi(galaxyManager);
     const planetApi = new PlanetApi(galaxyManager, modelEventClient, caches);

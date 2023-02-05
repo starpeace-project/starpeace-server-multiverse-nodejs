@@ -1,16 +1,19 @@
 import _ from 'lodash';
 import EventEmitter from 'events';
+import winston from 'winston';
 import { Publisher } from 'zeromq';
 
 const ASYNC_CLIENT_TO_SERVER_PORT = 19167;
 
 export default class ModelEventPublisher {
+  logger: winston.Logger;
   running: boolean = false;
   events: EventEmitter;
 
   publisherSocket: Publisher;
 
-  constructor () {
+  constructor (logger: winston.Logger) {
+    this.logger = logger;
     this.running = false;
     this.events = new EventEmitter();
 
@@ -20,7 +23,7 @@ export default class ModelEventPublisher {
   start (): void {
     try {
       this.publisherSocket.connect(`tcp://127.0.0.1:${ASYNC_CLIENT_TO_SERVER_PORT}`);
-      console.log(`[Model Event Publisher] Publisher started on port ${ASYNC_CLIENT_TO_SERVER_PORT}`);
+      this.logger.info(`Model Event Publisher started on port ${ASYNC_CLIENT_TO_SERVER_PORT}`);
 
       this.running = true;
     }
@@ -33,14 +36,14 @@ export default class ModelEventPublisher {
 
   stop () {
     this.running = false;
-    console.log('[Model Event Publisher] Stopping...');
+    this.logger.info('Stopping Model Event Publisher...');
     this.publisherSocket.close();
-    console.log('[Model Event Publisher] Stopped');
+    this.logger.info('Stopped Model Event Publisher');
   }
 
-  async connectSocket (socketId: string, accountId: string): Promise<void> {
+  async connectSocket (socketId: string, tycoonId: string): Promise<void> {
     if (!this.running) return;
-    await this.publisherSocket.send(['SOCKET:CONNECT', JSON.stringify({ accountId: accountId, socketId: socketId })]);
+    await this.publisherSocket.send(['SOCKET:CONNECT', JSON.stringify({ tycoonId: tycoonId, socketId: socketId })]);
   }
   async disconnectSocket (socketId: string): Promise<void> {
     if (!this.running) return;

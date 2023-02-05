@@ -23,6 +23,7 @@ export interface PlanetMetadata {
   planetWidth: number;
   planetHeight: number;
   mapId: string;
+  corporationInitialCash: number;
 }
 
 export class CoreConfigurations {

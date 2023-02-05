@@ -1,42 +1,57 @@
 import _ from 'lodash';
-import express from 'express';
 import http from 'http';
-import passport from 'passport';
+import jwt from 'jsonwebtoken';
 import socketio from 'socket.io';
 
 import ConnectionManager from '../connection-manager';
 import ModelEventPublisher from '../events/model-event-publisher';
 import { HttpServerCaches } from '../http-server';
 
+import GalaxyManager from '../galaxy-manager';
+import SimulationEvent from '../events/simulation-event';
+
+import Company from '../../company/company';
+import CompanyCache from '../../company/company-cache';
+import Corporation from '../../corporation/corporation';
+import CorporationCache from '../../corporation/corporation-cache';
+import Planet from '../../planet/planet';
+import PlanetCache from '../../planet/planet-cache';
 import Tycoon from '../../tycoon/tycoon';
 import TycoonVisa from '../../tycoon/tycoon-visa';
-import PlanetCache from '../../planet/planet-cache';
+import winston from 'winston';
 
 
 export default class BusFactory {
 
-  static create (server: http.Server): socketio.Server {
+  static create (server: http.Server, galaxyManager: GalaxyManager, caches: HttpServerCaches): socketio.Server {
     const io = new socketio.Server(server, {
       cors: {
-        origin: [/localhost\:9000/],
+        origin: [/localhost\:11010/, 'https://client.starpeace.io'],
         credentials: true
-      }
+      },
+      transports: ['websocket']
     });
 
-    BusFactory.configureAuthentication(io);
+    BusFactory.configureAuthentication(io, galaxyManager, caches);
     return io;
   }
 
-  static configureAuthentication (io: socketio.Server): void {
-    io.use((socket: socketio.Socket, next: (err?: Error) => void) => passport.initialize()(<express.Request>socket.request, <express.Response>{}, <express.NextFunction>next));
+  static configureAuthentication (io: socketio.Server, galaxyManager: GalaxyManager, caches: HttpServerCaches): void {
     io.use((socket: socketio.Socket, next: (err?: Error) => void) => {
-      passport.authenticate('jwt', { session: false }, (err: Error, user: any) => {
-        if (err || !user) return next();
-        return (<express.Request>socket.request).logIn(user, { session: false }, (err: Error) => err ? next(err) : next());
-      })(<express.Request>socket.request, <express.Response>{}, <express.NextFunction>next);
+      socket.request.headers['Authorization'] = `JWT ${socket.handshake.query.JWT}`;
+      socket.request.headers['PlanetId'] = socket.handshake.query.PlanetId;
+      socket.request.headers['VisaId'] = socket.handshake.query.VisaId;
+
+      jwt.verify(socket.handshake.query.JWT as string, galaxyManager.secret, {}, (err: any, payload: any) => {
+        if (err) return next(err);
+        if (new Date(payload.exp * 1000) < new Date()) return next();
+        const tycoon: Tycoon | null = caches.tycoon.forId(payload.id);
+        if (tycoon) socket.data.user = tycoon;
+        return next();
+      });
     });
     io.use((socket: socketio.Socket, next) => {
-      if ((<express.Request>socket.request).user) {
+      if (socket.data.user) {
         next();
       } else {
         next(new Error('unauthorized'))
@@ -44,9 +59,16 @@ export default class BusFactory {
     });
   }
 
-  static configureEvents (io: socketio.Server, connectionManager: ConnectionManager, modelEventPublisher: ModelEventPublisher, caches: HttpServerCaches): void {
+  static configureEvents (logger: winston.Logger, io: socketio.Server, connectionManager: ConnectionManager, modelEventPublisher: ModelEventPublisher, caches: HttpServerCaches): void {
     io.on('connect', (socket: socketio.Socket) => {
       if (!connectionManager.state.running) {
+        socket.disconnect(true);
+        return;
+      }
+
+      const user: Tycoon = <Tycoon> socket.data.user;
+      const visa: TycoonVisa | null = caches.tycoonVisa.forTycoonId(user.id);
+      if (!visa) {
         socket.disconnect(true);
         return;
       }
@@ -54,23 +76,15 @@ export default class BusFactory {
       socket.on('disconnect', () => {
         connectionManager.disconnectSocket(socket.id);
         modelEventPublisher.disconnectSocket(socket.id);
-        console.log('[HTTP Worker] Client socket disconnected');
+        logger.info(`Client socket disconnected: ${socket.id} @ ${socket.handshake.address}`);
       });
 
       socket.on('view', (data: any) => {
-        const user: Tycoon = <Tycoon>(<express.Request> socket.request).user;
         const visa: TycoonVisa | null = caches.tycoonVisa.forTycoonId(user.id);
         if (visa && _.isInteger(data.viewX) && _.isInteger(data.viewY)) {
           modelEventPublisher.updateViewTarget(visa.id, data.viewX, data.viewY);
         }
       });
-
-      const user: Tycoon = <Tycoon>(<express.Request> socket.request).user;
-      const visa: TycoonVisa | null = caches.tycoonVisa.forTycoonId(user.id);
-      if (!visa) {
-        socket.disconnect(true);
-        return;
-      }
 
       const existingSocketId: string | null = caches.tycoonSocket.forId(user.id);
       if (existingSocketId) {
@@ -80,16 +94,79 @@ export default class BusFactory {
       modelEventPublisher.connectSocket(socket.id, user.id);
       connectionManager.connectSocket(socket.id, user.id);
 
+      const corporationCache: CorporationCache = caches.corporation.withPlanetId(visa.planetId);
+      const corporation: Corporation | null = visa.corporationId ? corporationCache.forId(visa.corporationId) : visa.isTycoon ? corporationCache.forTycoonId(user.id) : null;
+      const companies: Company[] = [];
+      const cashflowJson: any = !corporation ? null : {
+        id: corporation.id,
+        lastMailAt: corporation.lastMailAt?.toISO(),
+        cash: 0,
+        cashflow: 0,
+        companies: companies.map((company) => {
+          return {
+            id: company.id,
+            cashflow: 0
+          };
+        })
+      };
+
       const planetCache: PlanetCache = caches.planet.withPlanetId(visa.planetId);
       socket.emit('initialize', {
-        view: { x: visa.viewX ?? 256, y: visa.viewY ?? 256 },
+        view: { x: visa.viewX, y: visa.viewY },
         planet: {
-          time: planetCache.planet.time.toISO()
+          time: planetCache.planet.time.toISO(),
+          season: planetCache.planet.season
         },
+        corporation: cashflowJson
       });
 
-      console.log('[HTTP Worker] Client socket connected');
+      logger.info(`Client socket connected: ${socket.id} @ ${socket.handshake.address}`);
     });
+  }
+
+  static notifySockets (logger: winston.Logger, caches: HttpServerCaches, event: SimulationEvent, socketsByTycoonId: Record<string, socketio.Socket>): void {
+    const planet: Planet = caches.planet.withPlanetId(event.planetId).update(event.planet);
+    const corporationCache: CorporationCache = caches.corporation.withPlanetId(event.planetId);
+    const companyCache: CompanyCache = caches.company.withPlanetId(event.planetId);
+
+    for (const [tycoonId, socket] of Object.entries(socketsByTycoonId)) {
+      const tycoon: Tycoon | null = caches.tycoon.forId(tycoonId);
+      const visa: TycoonVisa | null = caches.tycoonVisa.forTycoonId(tycoonId);
+      if (!tycoon || !visa || visa.isExpired) {
+        logger.info(`Client socket has unknown tycoon or expired visa: ${socket.id} @ ${socket.handshake.address}`);
+        socket.disconnect();
+        continue;
+      }
+      else if (visa.planetId !== event.planetId) {
+        // socket connected to different planete simulation
+        continue;
+      }
+
+      // FIXME: TODO: add per socket throttling (1 tps ?)
+
+      const corporation: Corporation | null = visa.corporationId ? corporationCache.forId(visa.corporationId) : visa.isTycoon ? corporationCache.forTycoonId(tycoon.id) : null;
+      const companies: Company[] = corporation ? companyCache.forCorporationId(corporation.id) : [];
+      const cashflowJson: any = !corporation ? null : {
+        id: corporation.id,
+        lastMailAt: corporation.lastMailAt?.toISO(),
+        cash: 0,
+        cashflow: 0,
+        companies: companies.map((company) => {
+          return {
+            id: company.id,
+            cashflow: 0
+          };
+        })
+      };
+
+      socket.emit('simulation', {
+        planet: {
+          time: planet.time.toISO(),
+          season: planet.season
+        },
+        corporation: cashflowJson
+      });
+    }
   }
 
     // getCashflow: () -> (req, res, next) =>

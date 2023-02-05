@@ -34,7 +34,7 @@ export default class RankingCache {
   }
 
   all (): Rankings[] { return Object.values(this.byTypeId); }
-  forTypeId (rankingTypeId: string): Rankings { return this.byTypeId[rankingTypeId]; }
+  forTypeId (rankingTypeId: string): Rankings | null { return this.byTypeId[rankingTypeId]; }
 
   update (rankingOrRankings: Rankings | Array<Rankings>): void {
     if (Array.isArray(rankingOrRankings)) {

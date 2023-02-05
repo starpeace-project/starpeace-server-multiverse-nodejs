@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import EventEmitter from 'events';
 import PQueue from 'p-queue';
+import winston from 'winston';
 import { Request } from 'zeromq';
 
 import Tycoon from '../../tycoon/tycoon';
@@ -21,13 +22,15 @@ const SYNC_API_PORT = 19165;
 
 
 export default class ModelEventClient {
+  logger: winston.Logger;
   running: boolean = false;
   events: EventEmitter;
 
   requestQueue: PQueue;
   requestSocket: Request;
 
-  constructor () {
+  constructor (logger: winston.Logger) {
+    this.logger = logger;
     this.running = false;
     this.events = new EventEmitter();
 
@@ -38,7 +41,7 @@ export default class ModelEventClient {
   start (): void {
     try {
       this.requestSocket.connect(`tcp://127.0.0.1:${SYNC_API_PORT}`);
-      console.log(`[Model Event Client] API Requester started on port ${SYNC_API_PORT}`);
+      this.logger.info(`Model Event Client started on port ${SYNC_API_PORT}`);
 
       this.running = true;
     }
@@ -51,9 +54,9 @@ export default class ModelEventClient {
 
   stop () {
     this.running = false;
-    console.log('[Model Event Client] Stopping...');
+    this.logger.info('Stopping Model Event Client...');
     this.requestSocket.close();
-    console.log('[Model Event Client] Stopped');
+    this.logger.info('Stopped Model Event Client');
   }
 
 
@@ -137,9 +140,9 @@ export default class ModelEventClient {
       return (JSON.parse(result.toString()).companies ?? []).map(Company.fromJson);
     });
   }
-  async createCompany (company: Company): Promise<Company> {
+  async createCompany (planetId: string, company: Company): Promise<Company> {
     return await this.requestQueue.add(async () => {
-      await this.requestSocket.send(JSON.stringify({ type: 'COMPANY:CREATE', company: company.toJson() }));
+      await this.requestSocket.send(JSON.stringify({ type: 'COMPANY:CREATE', planetId: planetId, company: company.toJson() }));
       const [result] = await this.requestSocket.receive();
       return Company.fromJson(JSON.parse(result.toString()).company);
     });
@@ -147,7 +150,7 @@ export default class ModelEventClient {
 
   async bookmarksForCorporation (planetId: string, corporationId: string): Promise<Bookmark[]> {
     return await this.requestQueue.add(async () => {
-      await this.requestSocket.send(JSON.stringify({ type: 'BOOKMARK:GET', planetId: planetId, corporationId: corporationId }));
+      await this.requestSocket.send(JSON.stringify({ type: 'BOOKMARK:LIST', planetId: planetId, corporationId: corporationId }));
       const [result] = await this.requestSocket.receive();
       return (JSON.parse(result.toString()).bookmarks ?? []).map(Bookmark.fromJson);
     });
@@ -199,7 +202,7 @@ export default class ModelEventClient {
 
   async mailForCorporation (planetId: string, corporationId: string): Promise<Mail[]> {
     return await this.requestQueue.add(async () => {
-      await this.requestSocket.send(JSON.stringify({ type: 'MAIL:GET', planetId: planetId, corporationId: corporationId }));
+      await this.requestSocket.send(JSON.stringify({ type: 'MAIL:LIST', planetId: planetId, corporationId: corporationId }));
       const [result] = await this.requestSocket.receive();
       return (JSON.parse(result.toString()).mails ?? []).map(Mail.fromJson);
     });
@@ -208,7 +211,11 @@ export default class ModelEventClient {
     return await this.requestQueue.add(async () => {
       await this.requestSocket.send(JSON.stringify({ type: 'MAIL:SEND', planetId: planetId, mail: mail.toJson() }));
       const [result] = await this.requestSocket.receive();
-      return Mail.fromJson(JSON.parse(result.toString()).mail);
+      const json = JSON.parse(result.toString());
+      if (json.error || !json.mail) {
+        throw Error(json.error ?? 'Unable to send mail');
+      }
+      return Mail.fromJson(json.mail);
     });
   }
   async markReadMail (planetId: string, mailId: string): Promise<string> {

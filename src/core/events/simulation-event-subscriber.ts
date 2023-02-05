@@ -1,3 +1,4 @@
+import winston from 'winston';
 import { Subscriber } from 'zeromq';
 
 import SimulationEvent from './simulation-event';
@@ -5,9 +6,11 @@ import SimulationEvent from './simulation-event';
 const SUBSCRIBE_PORT = 19170;
 
 export default class SimulationEventSubscriber {
+  logger: winston.Logger;
   subscriber: Subscriber;
 
-  constructor () {
+  constructor (logger: winston.Logger) {
+    this.logger = logger;
     this.subscriber = new Subscriber();
   }
 
@@ -15,7 +18,7 @@ export default class SimulationEventSubscriber {
     this.subscriber.connect(`tcp://127.0.0.1:${SUBSCRIBE_PORT}`);
     this.subscriber.subscribe('SIMULATION');
 
-    console.log(`[Simulation Event Subscriber] Started on port ${SUBSCRIBE_PORT}`);
+    this.logger.info(`Started Simulation Event Subscriber on port ${SUBSCRIBE_PORT}`);
     for await (const [topic, message] of this.subscriber) {
       if (topic.toString() !== 'SIMULATION') continue;
       await eventCallback(SimulationEvent.fromJson(JSON.parse(message.toString())));
@@ -23,9 +26,9 @@ export default class SimulationEventSubscriber {
   }
 
   stop (): void {
-    console.log('[Simulation Event Subscriber] Stopping...');
+    this.logger.info('Stopping Simulation Event Subscriber...');
     this.subscriber.close();
-    console.log('[Simulation Event Subscriber] Stopped');
+    this.logger.info('Stopped Simulation Event Subscriber');
   }
 
 }

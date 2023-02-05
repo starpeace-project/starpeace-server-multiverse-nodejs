@@ -1,5 +1,5 @@
 
-## v0.1.2 - in progress - updated 2023-01-27
+## v0.1.3 - in progress - updated 2023-02-05
 ### platform
 * [done] nodejs web-server with basic support [v0.1.0]
 * [done] simple in-memory and lightweight databases [v0.1.0]
@@ -13,8 +13,10 @@
 * [done] mail API's [v0.1.1]
 * [done] convert to typescipt [v0.1.2]
 * [done] add socket events [v0.1.2]
-* [in progress] cashflow event API's [v0.1.2]
-* [in progress] visa and tycoon position support [v0.1.2]
+* [done] cashflow event API's (dummy) [v0.1.3]
+* [done] visa and tycoon position support [v0.1.3]
+* [done] rotating and robust logging [v0.1.3]
+* [pending] corporation and company cash structure
 * [pending] visitor ID and API support
 * [pending] overlay and city zones API's
 * [pending] road API's
@@ -24,9 +26,9 @@
 * [in progress] town boundaries
 
 ### simulation
-* [in progress] basic hourly simulation platform
+* [done] basic simulation platform
 * [in progress] research progress
 * [in progress] construction progress
 * [pending] initial setup town roads
 * [pending] rankings
-* [pending] simulation economics engine
+* [pending] simulation economics engine v1

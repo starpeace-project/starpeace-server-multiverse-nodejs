@@ -13,7 +13,8 @@ export default class TycoonSocketCache {
 
   set (tycoonId: string, socketId: string) {
     if (this.socketIdByTycoonId[tycoonId]) {
-      throw Error("Account already has socket");
+      console.warn("Account already has socket");
+      this.clearBySocketId(this.socketIdByTycoonId[tycoonId]);
     }
 
     this.socketIdByTycoonId[tycoonId] = socketId;
@@ -26,7 +27,7 @@ export default class TycoonSocketCache {
       delete this.tycoonIdBySocketId[socketId];
       const otherSocketId: string | null = this.socketIdByTycoonId[tycoonId];
       if (otherSocketId && otherSocketId === socketId) {
-        delete this.tycoonIdBySocketId[tycoonId];
+        delete this.socketIdByTycoonId[tycoonId];
       }
     }
   }

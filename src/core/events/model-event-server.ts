@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import winston from 'winston';
 import { Publisher, Reply, Subscriber } from 'zeromq';
 
 import Tycoon from '../../tycoon/tycoon';
@@ -61,6 +62,7 @@ export interface ModelEventServerCaches {
 }
 
 export default class ModelEventServer {
+  logger: winston.Logger;
   running: boolean = false;
 
   replySocket: Reply;
@@ -71,7 +73,8 @@ export default class ModelEventServer {
   caches: ModelEventServerCaches;
 
 
-  constructor (stores: ModelEventServerStores, caches: ModelEventServerCaches) {
+  constructor (logger: winston.Logger, stores: ModelEventServerStores, caches: ModelEventServerCaches) {
+    this.logger = logger;
     this.running = false;
     this.replySocket = new Reply();
     this.publisherSocket = new Publisher();
@@ -83,15 +86,15 @@ export default class ModelEventServer {
   async start (): Promise<void> {
     try {
       await this.replySocket.bind(`tcp://127.0.0.1:${SYNC_API_PORT}`);
-      console.log(`[Model Event Server] API Receiver started on port ${SYNC_API_PORT}`);
+      this.logger.info(`API Receiver started on port ${SYNC_API_PORT}`);
 
       await this.publisherSocket.bind(`tcp://127.0.0.1:${ASYNC_SERVER_TO_CLIENT_PORT}`);
-      console.log(`[Model Event Server] Publisher started on port ${ASYNC_SERVER_TO_CLIENT_PORT}`);
+      this.logger.info(`Publisher started on port ${ASYNC_SERVER_TO_CLIENT_PORT}`);
 
       // this.subscriberSocket.connect(`tcp://127.0.0.1:${ASYNC_CLIENT_TO_SERVER_PORT}`);
       await this.subscriberSocket.bind(`tcp://127.0.0.1:${ASYNC_CLIENT_TO_SERVER_PORT}`);
       this.subscriberSocket.subscribe(...SOCKET_SUBSCRIBER_TOPICS);
-      console.log(`[Model Event Server] Subscriber started on port ${ASYNC_CLIENT_TO_SERVER_PORT}`);
+      this.logger.info(`Subscriber started on port ${ASYNC_CLIENT_TO_SERVER_PORT}`);
 
       this.running = true;
 
@@ -107,13 +110,13 @@ export default class ModelEventServer {
 
   stop (): void {
     this.running = false;
-    console.log('[Model Event Server] Stopping...');
+    this.logger.info('Stopping...');
 
     this.replySocket.close();
     this.publisherSocket.close();
     this.subscriberSocket.close();
 
-    console.log('[Model Event Server] Stopped');
+    this.logger.info('Stopped');
   }
 
   async receiveRequests (): Promise<void> {
@@ -121,9 +124,9 @@ export default class ModelEventServer {
       const request = JSON.parse(message.toString());
 
       if (request.type == 'TYCOON:CREATE') {
-        const tycoon: Tycoon = this.caches.tycoon.loadTycoon(await this.stores.tycoon.set(Tycoon.fromJson(request.payload)));
+        const tycoon: Tycoon = this.caches.tycoon.loadTycoon(await this.stores.tycoon.set(Tycoon.fromJson(request.tycoon)));
         await this.replySocket.send(JSON.stringify({ tycoon: tycoon.toJson() }));
-        await this.publisherSocket.send(['TYCOON:UPDATE', JSON.stringify({ tycoon: tycoon.id })]);
+        await this.publisherSocket.send(['TYCOON:UPDATE', JSON.stringify({ tycoon: tycoon.toJson() })]);
       }
       else if (request.type == 'TYCOON:LIST') {
         await this.replySocket.send(JSON.stringify({ tycoons: _.map(this.caches.tycoon.all(), (a) => a.toJson()) }));
@@ -239,9 +242,13 @@ export default class ModelEventServer {
         await this.replySocket.send(JSON.stringify({ buildings: buildings.map(c => c.toJson()) }));
       }
 
+      else if (request.type === 'MAIL:LIST') {
+        const mails: Mail[] = await this.stores.mailByPlanet[request.planetId]?.forCorporationId(request.corporationId) ?? []
+        await this.replySocket.send(JSON.stringify({ mails: mails.map(m => m.toJson()) }));
+      }
       else if (request.type === 'MAIL:SEND') {
         const mail: Mail = Mail.fromJson(request.mail);
-        const corporation: Corporation | undefined = this.caches.corporation.withPlanetId(request.planetId).forId(mail.corporationId)?.withLastSentAt(mail.sentAt);
+        const corporation: Corporation | undefined = this.caches.corporation.withPlanetId(request.planetId).forId(mail.corporationId)?.withLastMailAt(mail.sentAt);
         if (!corporation) {
           await this.replySocket.send(JSON.stringify({ error: 'INVALID_CORPORATION' }));
         }
@@ -254,8 +261,11 @@ export default class ModelEventServer {
         }
       }
       else if (request.type === 'MAIL:MARK_READ') {
-        const mail: Mail | undefined = (await this.stores.mailByPlanet[request.planetId]?.get(request.mailId))?.markRead();
-        await this.replySocket.send(JSON.stringify({ mail: mail?.toJson() }));
+        const mail: Mail | null = (await this.stores.mailByPlanet[request.planetId]?.get(request.mailId));
+        if (mail) {
+          await this.stores.mailByPlanet[request.planetId]?.set(mail.markRead());
+        }
+        await this.replySocket.send(JSON.stringify({ mailId: mail?.id }));
       }
       else if (request.type === 'MAIL:DELETE') {
         const mailId: string = await this.stores.mailByPlanet[request.planetId]?.delete(request.mailId);
@@ -268,7 +278,7 @@ export default class ModelEventServer {
       }
 
       else {
-        console.log(`[Model Event Server] Unknown request type ${request.type}`);
+        this.logger.warn(`Unknown request type ${request.type}`);
       }
     }
   }
@@ -292,11 +302,9 @@ export default class ModelEventServer {
           }
         }
         else {
-          console.log(`[Model Event Server] Unknown event topic ${topic}`);
+          this.logger.warn(`Unknown event topic ${topic}`);
         }
       }
-
-      console.log(`[Model Event Server] Subscriber no longer listening`);
     }
     catch (err) {
       if (this.running) {

@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import * as sqlite3 from 'sqlite3';
 
 import Mail from '../corporation/mail';
@@ -32,7 +31,7 @@ export default class MailStore {
     return new Promise((resolve:Function, reject:Function) => {
       this.db.all("SELECT content FROM mail", [], (err: Error, rows: Array<any>) => {
         if (err) return reject(err);
-        resolve(_.map(_.filter(rows, (row: any) => row?.content != null), (row: any) => Mail.fromJson(JSON.parse(row.content))));
+        resolve(rows.filter((row: any) => row?.content != null).map((row: any) => Mail.fromJson(JSON.parse(row.content))));
       });
     });
   }
@@ -50,7 +49,7 @@ export default class MailStore {
     return new Promise((resolve: Function, reject: Function) => {
       this.db.all("SELECT content FROM mail WHERE corporationId = ?", [corporationId], (err: Error, rows: Array<any>) => {
         if (err) return reject(err);
-        resolve(_.map(_.filter(rows, (row: any) => row?.id), (row: any) => Mail.fromJson(row)));
+        resolve(rows.filter((row: any) => row?.content != null).map((row: any) => Mail.fromJson(JSON.parse(row.content))));
       });
     });
   }

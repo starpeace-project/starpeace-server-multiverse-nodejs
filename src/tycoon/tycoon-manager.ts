@@ -1,4 +1,5 @@
 import { hash, compare } from 'bcrypt';
+import Filter from 'bad-words';
 
 import ModelEventClient from '../core/events/model-event-client';
 
@@ -19,7 +20,7 @@ export default class TycoonManager {
 
   create (username: string, password: string): Promise<Tycoon> {
     return new Promise<Tycoon>((resolve: (value: Tycoon) => void, reject: (value: any) => void) => {
-      if (!username?.length || !password?.length) return reject('INVALID_PARAMETERS');
+      if (!username?.length || !password?.length || new Filter().isProfane(username)) return reject('INVALID_NAME');
       const existingTycoon: Tycoon | null = this.forUsername(username);
       if (existingTycoon) {
         return reject('USERNAME_CONFLICT');
@@ -27,7 +28,6 @@ export default class TycoonManager {
       else {
         hash(password, 10, (err: Error | undefined, hash: string) => {
           if (err) return reject(err);
-          // TODO: use better initial position
           this.modelClient.createTycoon(new Tycoon(Utils.uuid(), username, username, hash))
             .then(resolve)
             .catch(reject)

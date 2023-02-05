@@ -1,4 +1,5 @@
 
+export const VISA_IDLE_EXPIRATION_IN_MS: number = 15 * 60 * 1000;
 
 export default class TycoonVisa {
   id: string;
@@ -26,6 +27,11 @@ export default class TycoonVisa {
     return this.type == 'tycoon';
   }
 
+  get isExpired (): boolean {
+    return new Date().getTime() > this.expires;
+  }
+
+
   withCorporationId (corporationId: string): TycoonVisa {
     this.corporationId = corporationId;
     return this;
@@ -38,7 +44,7 @@ export default class TycoonVisa {
   }
 
   touch (): TycoonVisa {
-    this.expires = new Date().getTime();
+    this.expires = new Date().getTime() + VISA_IDLE_EXPIRATION_IN_MS;
     return this;
   }
 

@@ -7,13 +7,12 @@ import { ApiCaches } from './api-factory';
 import Corporation from '../../corporation/corporation';
 import Rankings from '../../corporation/rankings';
 import Tycoon from '../../tycoon/tycoon';
-import TycoonVisa from '../../tycoon/tycoon-visa';
+import TycoonVisa, { VISA_IDLE_EXPIRATION_IN_MS } from '../../tycoon/tycoon-visa';
 import Town from '../../planet/town';
 
 import Utils from '../../utils/utils';
 import CorporationCache from '../../corporation/corporation-cache';
 
-const FIFTEEN_MINUTES = 900000;
 
 export default class PlanetApi {
   galaxyManager: GalaxyManager;
@@ -47,13 +46,13 @@ export default class PlanetApi {
         const viewX: number = town?.mapX ?? 500;
         const viewY: number = town?.mapY ?? 500;
 
-        const visa: TycoonVisa = await this.modelEventClient.saveVisa(new TycoonVisa(Utils.uuid(), req.body.identityType, tycoonId, req.planet.id, corporation?.id, new Date().getTime() + FIFTEEN_MINUTES, viewX, viewY));
+        const visa: TycoonVisa = await this.modelEventClient.saveVisa(new TycoonVisa(Utils.uuid(), req.body.identityType, tycoonId, req.planet.id, corporation?.id, new Date().getTime() + VISA_IDLE_EXPIRATION_IN_MS, viewX, viewY));
         if (!visa) return res.status(500);
         return res.json(visa.toJson());
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }
@@ -77,7 +76,7 @@ export default class PlanetApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }
@@ -96,7 +95,7 @@ export default class PlanetApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }
@@ -145,7 +144,7 @@ export default class PlanetApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }
@@ -179,7 +178,7 @@ export default class PlanetApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }
@@ -197,7 +196,7 @@ export default class PlanetApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }
@@ -212,7 +211,7 @@ export default class PlanetApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }
@@ -223,8 +222,8 @@ export default class PlanetApi {
 
       try {
         const corporationCache: CorporationCache = this.caches.corporation.withPlanet(req.planet);
-        const rankings: Rankings = this.caches.rankings.withPlanet(req.planet).forTypeId(req.params.rankingTypeId);
-        return res.json(rankings.rankings.map(ranking => {
+        const rankings: Rankings | null = this.caches.rankings.withPlanet(req.planet).forTypeId(req.params.rankingTypeId);
+        return res.json((rankings?.rankings ?? []).map(ranking => {
           const tycoon: Tycoon | null = this.caches.tycoon.forId(ranking.tycoonId);
           const corporation: Corporation | null = corporationCache.forId(ranking.corporationId);
           if (!tycoon || !corporation) return null;
@@ -240,7 +239,7 @@ export default class PlanetApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }
@@ -255,7 +254,7 @@ export default class PlanetApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }

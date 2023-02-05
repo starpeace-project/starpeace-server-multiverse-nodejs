@@ -1,3 +1,6 @@
+import winston from 'winston';
+import 'winston-daily-rotate-file';
+
 import GalaxyManager from '../core/galaxy-manager';
 import ModelEventServer from '../core/events/model-event-server';
 import SimulationEvent from '../core/events/simulation-event';
@@ -25,6 +28,29 @@ import TownCache from '../planet/town-cache';
 import TownStore from '../planet/town-store';
 import InventionCache from '../company/invention-cache';
 import CacheByPlanet from '../planet/cache-by-planet';
+
+const logger: winston.Logger = winston.createLogger({
+  transports: [new winston.transports.DailyRotateFile({
+    level: 'info',
+    filename: 'logs/process-model-server-%DATE%.log',
+    datePattern: 'YYYY-MM-DD',
+    zippedArchive: false,
+    maxSize: '20m',
+    maxFiles: '14d',
+    handleRejections: true,
+    handleExceptions: true
+  }), new winston.transports.Console({
+    handleRejections: true,
+    handleExceptions: true
+  })],
+  format: winston.format.combine(
+    winston.format.splat(),
+    winston.format.timestamp(),
+    winston.format.label({ label: "Model Server" }),
+    winston.format.printf(({ level, message, label, timestamp }) => `${timestamp} [${label}][${level}]: ${message}`)
+  ),
+  exitOnError: false
+});
 
 
 const galaxyManager = GalaxyManager.create();
@@ -61,8 +87,8 @@ const caches = {
   town: new CacheByPlanet(townByPlanet)
 };
 
-const simulationSubscriber = new SimulationEventSubscriber();
-const modelServer = new ModelEventServer({
+const simulationSubscriber = new SimulationEventSubscriber(logger);
+const modelServer = new ModelEventServer(logger, {
   tycoon: tycoonStore,
   tycoonToken: tycoonTokenStore,
   bookmarkByPlanet: bookmarkByPlanet,
@@ -101,7 +127,7 @@ const persistCaches = async () => {
     ]);
   }
   catch (err) {
-    console.error(err);
+    logger.error(err);
   }
 };
 
@@ -130,7 +156,7 @@ process.on('SIGINT', async () => {
     await closeResources();
   }
   catch (err) {
-    console.log('[Model Event Server] Unable to shutdown cleanly: ' + err);
+    logger.warn(`Unable to shutdown cleanly: ${err}`);
   }
   process.exit();
 });
@@ -149,6 +175,6 @@ loadData()
   .then(() => modelServer.start())
   .then(() => simulationSubscriber.start(handleEvent))
   .catch((err) => {
-    console.error(err);
+    logger.error(err);
     process.exit(1);
   });

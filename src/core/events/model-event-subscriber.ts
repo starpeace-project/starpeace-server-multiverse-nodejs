@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import EventEmitter from 'events';
+import winston from 'winston';
 import { Subscriber } from 'zeromq';
 
 import ModelEventClient from './model-event-client';
@@ -41,13 +42,15 @@ export interface ModelEventSubscriberCaches {
 }
 
 export default class ModelEventSubscriber {
+  logger: winston.Logger;
   running: boolean = false;
   events: EventEmitter;
 
   subscriberSocket: Subscriber;
   modelEventClient: ModelEventClient;
 
-  constructor (modelEventClient: ModelEventClient) {
+  constructor (logger: winston.Logger, modelEventClient: ModelEventClient) {
+    this.logger = logger;
     this.running = false;
     this.events = new EventEmitter();
 
@@ -58,8 +61,8 @@ export default class ModelEventSubscriber {
   async start (caches: ModelEventSubscriberCaches): Promise<void> {
     try {
       this.subscriberSocket.connect(`tcp://127.0.0.1:${ASYNC_SERVER_TO_CLIENT_PORT}`);
-      this.subscriberSocket.subscribe(...Object.keys(SOCKET_SUBSCRIBER_TOPICS));
-      console.log(`[Model Event Subscriber] Subscriber started on port ${ASYNC_SERVER_TO_CLIENT_PORT}`);
+      this.subscriberSocket.subscribe(...SOCKET_SUBSCRIBER_TOPICS);
+      this.logger.info(`Model Event Subscriber started on port ${ASYNC_SERVER_TO_CLIENT_PORT}`);
 
       this.running = true;
 
@@ -96,7 +99,7 @@ export default class ModelEventSubscriber {
           caches.tycoonVisa.clearByVisaId(notification.visaId);
         }
         else {
-          console.log(`[Model Event Subscriber] Unknown event topic ${topic}`);
+          this.logger.warn(`Model Event Subscriber received unknown event topic ${topic}`);
         }
       }
     }
@@ -109,9 +112,9 @@ export default class ModelEventSubscriber {
 
   stop () {
     this.running = false;
-    console.log('[Model Event Subscriber] Stopping...');
+    this.logger.info('Stopping Model Event Subscriber...');
     this.subscriberSocket.close();
-    console.log('[Model Event Subscriber] Stopped');
+    this.logger.info('Stopped Model Event Subscriber');
   }
 
 }

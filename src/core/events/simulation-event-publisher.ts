@@ -1,3 +1,4 @@
+import winston from 'winston';
 import { Publisher } from 'zeromq';
 
 import Planet from '../../planet/planet';
@@ -5,11 +6,13 @@ import Planet from '../../planet/planet';
 const SUBSCRIBE_PORT = 19170;
 
 export default class SimulationEventPublisher {
+  logger: winston.Logger;
   planetIndex: number;
   publisherSocket: Publisher;
   bound: boolean;
 
-  constructor (planetIndex: number) {
+  constructor (logger: winston.Logger, planetIndex: number) {
+    this.logger = logger;
     this.planetIndex = planetIndex;
     this.publisherSocket = new Publisher();
     this.bound = false;
@@ -17,15 +20,15 @@ export default class SimulationEventPublisher {
 
   async start (): Promise<void> {
     await this.publisherSocket.bind(`tcp://127.0.0.1:${SUBSCRIBE_PORT + this.planetIndex}`);
-    console.log(`[Simulation Event Publisher] Started on port ${SUBSCRIBE_PORT + this.planetIndex}`);
+    this.logger.info(`Started Simulation Event Publisher on port ${SUBSCRIBE_PORT + this.planetIndex}`);
     this.bound = true;
   }
 
   stop (): void {
-    console.log('[Simulation Event Publisher] Stopping...');
+    this.logger.info('Stopping Simulation Event Publisher...');
     this.bound = false;
     this.publisherSocket.close();
-    console.log('[Simulation Event Publisher] Stopped');
+    this.logger.info('Stopped Simulation Event Publisher');
   }
 
   async sendEvent (planetId: string, planet: Planet): Promise<void> {

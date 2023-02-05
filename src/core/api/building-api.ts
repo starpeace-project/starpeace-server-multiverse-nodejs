@@ -33,7 +33,7 @@ export default class BuildingApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }
@@ -48,7 +48,7 @@ export default class BuildingApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {})
+        return res.status(500);
       }
     };
   }
@@ -64,7 +64,7 @@ export default class BuildingApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }
@@ -80,7 +80,7 @@ export default class BuildingApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }

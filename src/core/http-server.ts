@@ -26,7 +26,6 @@ import CompanyCache from '../company/company-cache';
 import { asCompanyDao } from '../company/company-dao';
 import InventionCache from '../company/invention-cache';
 import { asInventionDao } from '../company/invention-dao';
-import Planet from '../planet/planet';
 import PlanetCache from '../planet/planet-cache';
 import { asPlanetDao } from '../planet/planet-dao';
 import RankingsCache from '../corporation/rankings-cache';
@@ -35,6 +34,7 @@ import TownCache from '../planet/town-cache';
 import { asTownDao } from '../planet/town-dao';
 import TycoonVisaCache from '../tycoon/tycoon-visa-cache';
 import { asTycoonVisaDao } from '../tycoon/tycoon-visa-dao';
+import winston from 'winston';
 
 export interface HttpServerCaches {
   tycoon: TycoonCache;
@@ -51,6 +51,7 @@ export interface HttpServerCaches {
 }
 
 export default class HttpServer {
+  logger: winston.Logger;
   modelEventClient: ModelEventClient;
   modelEventPublisher: ModelEventPublisher;
   modelEventSubscriber: ModelEventSubscriber;
@@ -69,11 +70,28 @@ export default class HttpServer {
 
 
   constructor () {
-    this.modelEventClient = new ModelEventClient();
-    this.modelEventPublisher = new ModelEventPublisher();
-    this.modelEventSubscriber = new ModelEventSubscriber(this.modelEventClient);
+    this.logger = winston.createLogger({
+      transports: [new winston.transports.DailyRotateFile({
+        level: 'info',
+        filename: 'logs/process-http-%DATE%.log',
+        datePattern: 'YYYY-MM-DD',
+        zippedArchive: false,
+        maxSize: '20m',
+        maxFiles: '14d'
+      }), new winston.transports.Console()],
+      format: winston.format.combine(
+        winston.format.splat(),
+        winston.format.timestamp(),
+        winston.format.label({ label: "HTTP Worker" }),
+        winston.format.printf(({ level, message, label, timestamp }) => `${timestamp} [${label}][${level}]: ${message}`)
+      )
+    });
 
-    this.simulationSubscriber = new SimulationEventSubscriber();
+    this.modelEventClient = new ModelEventClient(this.logger);
+    this.modelEventPublisher = new ModelEventPublisher(this.logger);
+    this.modelEventSubscriber = new ModelEventSubscriber(this.logger, this.modelEventClient);
+
+    this.simulationSubscriber = new SimulationEventSubscriber(this.logger);
 
     this.galaxyManager = GalaxyManager.create();
     const planetIds: string[] = this.galaxyManager.planets.map((p) => p.id);
@@ -94,8 +112,8 @@ export default class HttpServer {
     };
 
 
-    this.server = ApiFactory.create(this.galaxyManager, this.modelEventClient, this.caches);
-    this.io = BusFactory.create(this.server);
+    this.server = ApiFactory.create(this.logger, this.galaxyManager, this.modelEventClient, this.caches);
+    this.io = BusFactory.create(this.server, this.galaxyManager, this.caches);
     this.connectionManager = new ConnectionManager(this.io);
 
     this.configureEvents();
@@ -104,7 +122,7 @@ export default class HttpServer {
 
   configureEvents () {
     this.server.on('connection', (socket) => this.connectionManager.handleConnection(socket));
-    BusFactory.configureEvents(this.io, this.connectionManager, this.modelEventPublisher, this.caches);
+    BusFactory.configureEvents(this.logger, this.io, this.connectionManager, this.modelEventPublisher, this.caches);
     this.modelEventClient.events.on('disconnectSocket', (socketId) => this.connectionManager.disconnectSocket(socketId));
   }
 
@@ -151,7 +169,7 @@ export default class HttpServer {
 
     this.waitForSimulationState(() => {
       this.server.listen(19160, () => {
-        console.log('[HTTP Worker] Started on port 19160');
+        this.logger.info('Started on port 19160');
         this.running = true;
       });
     });
@@ -160,7 +178,7 @@ export default class HttpServer {
   async stop (): Promise<void> {
     if (this.running) {
       this.running = false;
-      console.log('[HTTP Worker] Stopping...');
+      this.logger.info('Stopping Worker...');
 
       this.connectionManager.stop();
       await new Promise<void>((resolve: () => void, reject: (err: Error) => void) => this.io.close((err?: Error) => err ? reject(err) : resolve()));
@@ -181,11 +199,11 @@ export default class HttpServer {
         ...this.caches.town.closeAll()
       ]);
 
-      console.log('[HTTP Worker] Stopped');
+      this.logger.info('Stopped Worker');
       process.exit();
     }
     else {
-      console.log('[HTTP Worker] Already stopped');
+      this.logger.warn('Worker already stopped');
       process.exit();
     }
   }
@@ -195,19 +213,7 @@ export default class HttpServer {
     for (let socketId of info.disconnectableSocketIds) {
       await this.modelEventPublisher.disconnectSocket(socketId);
     }
-
-    const planet: Planet = this.caches.planet.withPlanetId(event.planetId).update(event.planet);
-
-    for (const [tycoonId, socket] of Object.entries(info.connectedSocketsByTycoonIds)) {
-      const tycoon = this.caches.tycoon.forId(tycoonId);
-      if (tycoon) {
-        socket.emit('simulation', {
-          planet: {
-            time: planet.time.toISO()
-          }
-        });
-      }
-    }
+    BusFactory.notifySockets(this.logger, this.caches, event, info.connectedSocketsByTycoonIds);
   }
 
 }

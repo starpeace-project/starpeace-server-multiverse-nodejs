@@ -20,6 +20,7 @@ class SimulationFrame {
 
 export default class Simulation {
   logger: winston.Logger;
+  simulationLogger: winston.Logger;
   eventPublisher: SimulationEventPublisher;
 
   planetId: string;
@@ -27,17 +28,18 @@ export default class Simulation {
 
   running: boolean = false;
 
-  constructor (eventPublisher: SimulationEventPublisher, planetId: string, planetCache: PlanetCache) {
+  constructor (logger: winston.Logger, eventPublisher: SimulationEventPublisher, planetId: string, planetCache: PlanetCache) {
+    this.logger = logger;
     this.eventPublisher = eventPublisher;
     this.planetId = planetId;
     this.planetCache = planetCache;
 
-    this.logger = winston.createLogger({
+    this.simulationLogger = winston.createLogger({
       transports: [new winston.transports.DailyRotateFile({
         level: 'info',
         filename: 'logs/simulation-%DATE%.log',
         datePattern: 'YYYY-MM-DD-HH',
-        zippedArchive: true,
+        zippedArchive: false,
         maxSize: '20m',
         maxFiles: '14d'
       })],
@@ -60,13 +62,13 @@ export default class Simulation {
   }
 
   stop (): void {
-    console.log('[Simulation] Stopping engine...');
+    this.logger.info('Stopping engine...');
     this.running = false;
   }
 
   mainLoop (): void {
     if (!this.running) {
-      console.log("[Simulation] Engine stopped");
+      this.logger.info('Engine stopped');
       return;
     }
 
@@ -90,7 +92,7 @@ export default class Simulation {
     const planet: Planet = this.planetCache.planet;
     planet.time = planet.time.plus({ hour: 1 });
 
-    this.logger.info("Planet time: %s", planet.time.toISO({ suppressSeconds: true, suppressMilliseconds: true, includeOffset: false }));
+    this.simulationLogger.info("Planet time: %s", planet.time.toISO({ suppressSeconds: true, suppressMilliseconds: true, includeOffset: false }));
 
 
 

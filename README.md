@@ -7,7 +7,6 @@
 [![GitHub issues](https://img.shields.io/github/issues/starpeace-project/starpeace-server-multiverse-nodejs.svg)](https://github.com/starpeace-project/starpeace-server-multiverse-nodejs/issues)
 [![GitHub stars](https://img.shields.io/github/stars/starpeace-project/starpeace-server-multiverse-nodejs.svg)](https://github.com/starpeace-project/starpeace-server-multiverse-nodejs/stargazers)
 [![Discord](https://img.shields.io/discord/449310464321650703.svg?logo=discord)](https://discord.gg/TF9Bmsj)
-![Twitter Follow](https://img.shields.io/twitter/follow/starpeace_io.svg?style=social&label=Follow)
 
 Backend server for [STARPEACE](https://www.starpeace.io), including API interface, simple persistence platform, and simulation engine, written in javascript and using NodeJS.
 

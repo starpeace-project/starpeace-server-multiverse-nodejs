@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import fs from 'fs-extra';
 import path from 'path';
+import winston from 'winston';
 
 import { BuildingDefinition, BuildingImageDefinition, CityZone, CompanySeal, IndustryCategory, IndustryType, InventionDefinition, Level, ResourceType, ResourceUnit, SimulationDefinition, SimulationDefinitionParser } from '@starpeace/starpeace-assets-types';
 
@@ -46,8 +47,21 @@ export interface SetupConfigurations {
 //   ])
 // }
 
+const logger = winston.createLogger({
+  transports: [new winston.transports.Console({
+    handleRejections: true,
+    handleExceptions: true
+  })],
+  format: winston.format.combine(
+    winston.format.splat(),
+    winston.format.timestamp(),
+    winston.format.printf(({ level, message, timestamp }) => `${timestamp} [${level}]: ${message}`)
+  ),
+  exitOnError: false
+});
 
-Logger.banner();
+
+Logger.banner(logger);
 
 // bmp_path = path.join(__dirname, '../../node_modules/@starpeace/starpeace-assets/assets/maps/ancoeus.bmp')
 // bmp_buffer = fs.readFileSync(bmp_path)

@@ -43,7 +43,7 @@ export default class Mail {
       sentAt: this.sentAt.toISO(),
       planetSentAt: this.planetSentAt.toISODate(),
       from: this.from.toJson(),
-      to: _.map(this.to, (t) => t.toJson()),
+      to: this.to.map(t => t.toJson()),
       subject: this.subject,
       body: this.body
     };
@@ -57,7 +57,7 @@ export default class Mail {
       DateTime.fromISO(json.sentAt),
       DateTime.fromISO(json.planetSentAt),
       MailEntity.fromJson(json.from),
-      _.map(json.to, MailEntity.fromJson),
+      (json.to ?? []).map(MailEntity.fromJson),
       json.subject,
       json.body
     );

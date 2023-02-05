@@ -64,7 +64,7 @@ export default class GalaxyApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }
@@ -99,8 +99,13 @@ export default class GalaxyApi {
     return async (req: express.Request, res: express.Response, next: any): Promise<express.Response> => {
       if (!req.body.username?.length || !req.body.password?.length) return res.status(400);
       return passport.authenticate('register', { session: false }, async (error, user, info) => {
-        if (error) return res.status(500).json(error);
-        if (!user) return res.status(401).json({ message: info.message });
+        if (error) {
+          if (error === 'INVALID_NAME' || error === 'USERNAME_CONFLICT') {
+            return res.status(400).json({ code: error });
+          }
+          return res.status(500);
+        }
+        if (!user) return res.status(401).json({ code: info.message });
         return await this.loginUser(req, res, next, user, req.body.rememberMe);
       })(req, res, next);
     };
@@ -111,18 +116,21 @@ export default class GalaxyApi {
       if (req.body.refreshToken) {
         try {
           const tycoon: Tycoon | null = await this.modelEventClient.loginToken(req.body.refreshToken);
-          if (!tycoon) return res.status(401).json({message: 'INVALID_TOKEN'});
+          if (!tycoon) return res.status(401).json({ code: 'INVALID_TOKEN' });
           return await this.loginUser(req, res, next, tycoon, true);
         }
         catch (err) {
           console.error(err);
-          return res.status(500).json(err);
+          return res.status(500);
         }
       }
       else {
-        return passport.authenticate('login', { session: false }, async (error, user, info) => {
-          if (error) return res.status(500).json(error);
-          if (!user) return res.status(401).json({message: info.message});
+        return passport.authenticate('login', { session: false }, async (err, user) => {
+          if (err) {
+            console.error(err);
+            return res.status(500);
+          }
+          if (!user) return res.status(401).json({ code: 'INVALID' });
           return await this.loginUser(req, res, next, user, req.body.rememberMe);
         })(req, res, next);
       }
@@ -132,17 +140,15 @@ export default class GalaxyApi {
   logout (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
       try {
-        const visaId = req.header('VisaId');
-        if (visaId) {
-          await this.modelEventClient.destroyVisa(visaId);
+        if (req.visa) {
+          await this.modelEventClient.destroyVisa(req.visa.id);
         }
-
-        await new Promise<void>((resolve, reject) => req.logout({}, (err: any) => err ? reject(err) : resolve()));
+        // TODO: may want to add JWT token to blocklist
         return res.status(200).json({});
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }

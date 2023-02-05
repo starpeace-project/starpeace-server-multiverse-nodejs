@@ -6,6 +6,7 @@ import path from 'path';
 
 import GalaxyManager from '../core/galaxy-manager';
 import Logger from '../utils/logger';
+import winston from 'winston';
 
 interface Processes {
   simulation?: any;
@@ -14,6 +15,7 @@ interface Processes {
 }
 
 export default class ProcessManager {
+  logger: winston.Logger;
   running: boolean = false;
   processes: Processes = {
     simulation: null,
@@ -24,8 +26,30 @@ export default class ProcessManager {
   galaxyManager: GalaxyManager;
 
   constructor () {
-    Logger.banner();
+    this.logger = winston.createLogger({
+      transports: [new winston.transports.DailyRotateFile({
+        level: 'info',
+        filename: 'logs/process-manager-%DATE%.log',
+        datePattern: 'YYYY-MM-DD',
+        zippedArchive: false,
+        maxSize: '20m',
+        maxFiles: '14d',
+        handleRejections: true,
+        handleExceptions: true
+      }), new winston.transports.Console({
+        handleRejections: true,
+        handleExceptions: true
+      })],
+      format: winston.format.combine(
+        winston.format.splat(),
+        winston.format.timestamp(),
+        winston.format.label({ label: "Process Manager" }),
+        winston.format.printf(({ level, message, label, timestamp }) => `${timestamp} [${label}][${level}]: ${message}`)
+      ),
+      exitOnError: false
+    });
 
+    Logger.banner(this.logger);
     this.galaxyManager = GalaxyManager.create();
   }
 
@@ -41,15 +65,15 @@ export default class ProcessManager {
     this.initializeModelServer();
     this.initializeHttpWorkers(workerCount);
 
-    console.log(`[Process Manager] Total CPU: ${cpuCount}`);
-    console.log("[Process Manager] Model Server: 1");
-    console.log(`[Process Manager] Simulation: ${planetCount}`);
-    console.log(`[Process Manager] HTTP Worker: ${workerCount}\n`);
+    this.logger.info(`Total CPU: ${cpuCount}`);
+    this.logger.info("Model Server: 1");
+    this.logger.info(`Simulation: ${planetCount}`);
+    this.logger.info(`HTTP Worker: ${workerCount}`);
   }
 
   stop (): void {
     if (this.running) {
-      console.log('[Process Manager] Shutting down server...');
+      this.logger.info('Shutting down server...');
       this.running = false;
       this.shutdownPollingLoop();
     }
@@ -58,14 +82,14 @@ export default class ProcessManager {
   shutdownPollingLoop (): void {
     if (!this.running) {
       if (!this.processes.simulation && !this.processes.model && !_.compact(_.values(this.processes.workerById)).length) {
-        console.log('[Process Manager] All processes stopped, exitting');
+        this.logger.info('All processes stopped, exitting');
         process.exit();
       }
       else {
         const simulationStatus = 'simulation ' + (this.processes.simulation ? 'running' : 'stopped');
         const modelStatus = 'model ' + (this.processes.model ? 'running' : 'stopped');
         const workerStatus = _.compact(_.values(this.processes.workerById)).length + ' HTTP workers running';
-        console.log('[Process Manager] Waiting for processes to end... (' + simulationStatus + ', ' + modelStatus + ', ' + workerStatus + ')');
+        this.logger.info('Waiting for processes to end... (' + simulationStatus + ', ' + modelStatus + ', ' + workerStatus + ')');
         setTimeout(() => this.shutdownPollingLoop(), 1000);
       }
     }
@@ -75,7 +99,7 @@ export default class ProcessManager {
     this.processes.simulation = fork(path.join(__dirname, '../process/process-simulation.js'), [planetId, planetIndex.toString()]);
     this.processes.simulation.on('exit', (code: any) => {
       if (this.running) {
-        console.log(`[Process Manager] Simulation engine for ${planetId} exitted with status ${code}, will restart`);
+        this.logger.info(` Simulation engine for ${planetId} exitted with status ${code}, will restart`);
         this.initializeSimulation(planetId, planetIndex);
       }
       else {
@@ -88,7 +112,7 @@ export default class ProcessManager {
     this.processes.model = fork(path.join(__dirname, '../process/process-model-server.js'));
     this.processes.model.on('exit', (code: any) => {
       if (this.running) {
-        console.log(`[Process Manager] Model server exitted with status ${code}, will restart`);
+        this.logger.info(`Model server exitted with status ${code}, will restart`);
         this.initializeModelServer();
       }
       else {
@@ -107,7 +131,7 @@ export default class ProcessManager {
     cluster.on('exit', (worker: Worker, code: number) => {
       this.processes.workerById[worker.id] = null;
       if (this.running) {
-        console.log(`[Process Manager] Worker ${worker.id} stopped with code ${code}, will restart`);
+        this.logger.info(`Worker ${worker.id} stopped with code ${code}, will restart`);
         const newWorker = cluster.fork();
         this.processes.workerById[newWorker.id] = newWorker;
       }

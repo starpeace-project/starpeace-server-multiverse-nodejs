@@ -1,7 +1,5 @@
 import _ from 'lodash';
 import express from 'express';
-import passport from 'passport';
-import jwt from 'jsonwebtoken';
 
 import GalaxyManager from '../galaxy-manager';
 import ModelEventClient from '../events/model-event-client';
@@ -22,64 +20,6 @@ export default class TycoonApi {
     this.modelEventClient = modelEventClient;
     this.caches = caches;
   }
-
-  loginUser (req: express.Request, res: express.Response, next: any, user: Tycoon, issueRefreshToken: boolean): void {
-    req.logIn(user, { session: false }, async (err: any) => {
-      if (err) return next(err);
-
-      try {
-        const accessToken: string = jwt.sign({ id: user.id }, this.galaxyManager.secret, { expiresIn: 3600 });
-        const response: object = { id: user.id, username: user.username, name: user.name, accessToken: accessToken };
-        if (!issueRefreshToken) return res.json(response);
-
-        const token: string = await this.modelEventClient.issueToken(user);
-        return res.json(Object.assign(response, { refreshToken: token }));
-      }
-      catch (error) {
-        console.error(error);
-        return res.status(500).json(error);
-      }
-    });
-  }
-
-  create (): (req: express.Request, res: express.Response, next: any) => any {
-    return async (req: express.Request, res: express.Response, next: any) => {
-      if (!req.body.username?.length || !req.body.password?.length) return res.status(400);
-      return passport.authenticate('register', { session: false }, (error: any, user: Tycoon, info: any) => {
-        if (error) return res.status(500).json(error);
-        if (!user) return res.status(401).json({message: info.message});
-        return this.loginUser(req, res, next, user, req.body.rememberMe);
-      })(req, res, next);
-    };
-  }
-
-  login (): (req: express.Request, res: express.Response, next: any) => any {
-    return async (req: express.Request, res: express.Response, next: any) => {
-    if (req.body.refreshToken?.length) {
-      this.modelEventClient.loginToken(req.body.refreshToken)
-        .then((user: Tycoon) => this.loginUser(req, res, next, user, true))
-        .catch((error) => {
-          console.error(error);
-          return res.status(500).json(error);
-        });
-    }
-    else {
-      passport.authenticate('login', { session: false }, (error, user, info) => {
-        if (error) return res.status(500).json(error);
-        if (!user) return res.status(401).json({message: info.message});
-        return this.loginUser(req, res, next, user, req.body.rememberMe);
-      })(req, res, next);
-    }
-    };
-  }
-
-  logout (): (req: express.Request, res: express.Response) => any {
-    return async (req: express.Request, res: express.Response) => {
-      await new Promise(resolve => req.logout(resolve));
-      return res.status(200).json({});
-    };
-  }
-
 
   getTycoon (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
@@ -104,7 +44,7 @@ export default class TycoonApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }
@@ -137,7 +77,7 @@ export default class TycoonApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }

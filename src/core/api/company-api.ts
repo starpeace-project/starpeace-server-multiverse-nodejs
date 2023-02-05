@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import express from 'express';
+import Filter from 'bad-words';
 import { DateTime } from 'luxon';
 
 import GalaxyManager from '../galaxy-manager';
@@ -30,7 +31,7 @@ export default class CompanyApi {
       if (!req.planet || !req.visa || !req.visa.corporationId) return res.status(400);
 
       const name = _.trim(req.body.name);
-      if (!name?.length) return res.status(400).json({ code: 'INVALID_NAME' });
+      if (name?.length < 3 || new Filter().isProfane(name)) return res.status(400).json({ code: 'INVALID_NAME' });
 
       const seal = this.galaxyManager.metadataCoreForPlanet(req.planet.id)?.sealsById[req.body.sealId];
       if (!seal?.playable) return res.status(400).json({ code: 'INVALID_SEAL' });
@@ -39,15 +40,15 @@ export default class CompanyApi {
         const tycoonId: string = req.visa.tycoonId;
         const companies: Company[] = this.caches.company.withPlanet(req.planet).all() ?? [];
         if (companies.filter(company => company.tycoonId == tycoonId).length > 25) return res.status(400).json({ code: 'TYCOON_LIMIT' });
-        if (!companies.find(company => company.name == name)) return res.status(400).json({ code: 'NAME_CONFLICT' });
+        if (!!companies.find(company => company.name == name)) return res.status(400).json({ code: 'NAME_CONFLICT' });
 
-        const company: Company = await this.modelEventClient.createCompany(new Company(Utils.uuid(), req.planet.id, tycoonId, req.visa.corporationId, seal.id, name));
+        const company: Company = await this.modelEventClient.createCompany(req.planet.id, new Company(Utils.uuid(), req.planet.id, tycoonId, req.visa.corporationId, seal.id, name));
         if (!company) return res.status(500);
         return res.json(company.toJsonApi());
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }
@@ -67,7 +68,7 @@ export default class CompanyApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }
@@ -106,7 +107,7 @@ export default class CompanyApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }
@@ -131,7 +132,7 @@ export default class CompanyApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {})
+        return res.status(500)
       }
     };
   }
@@ -154,7 +155,7 @@ export default class CompanyApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }

@@ -3,17 +3,23 @@ import { DateTime } from 'luxon';
 
 import Company from '../company/company';
 
+
 export default class Corporation {
   id: string;
   tycoonId: string;
   planetId: string;
+
   name: string;
   levelId: string;
+
   lastMailAt: DateTime | null;
   buildingCount: number;
+
   companyIds: Set<string>;
 
-  constructor (id: string, tycoonId: string, planetId: string, name: string, levelId: string, lastMailAt: DateTime | null, buildingCount: number, companyIds: Set<string>) {
+  cash: number;
+
+  constructor (id: string, tycoonId: string, planetId: string, name: string, levelId: string, lastMailAt: DateTime | null, buildingCount: number, companyIds: Set<string>, cash: number) {
     this.id = id;
     this.tycoonId = tycoonId;
     this.planetId = planetId;
@@ -22,13 +28,18 @@ export default class Corporation {
     this.lastMailAt = lastMailAt;
     this.buildingCount = buildingCount;
     this.companyIds = companyIds;
+    this.cash = cash;
   }
 
-  withLastSentAt (time: DateTime): Corporation {
+  withLastMailAt (time: DateTime): Corporation {
     this.lastMailAt = time;
     return this;
   }
 
+  withCash (cash: number): Corporation {
+    this.cash = cash;
+    return this;
+  }
 
   toJson (): any {
     return {
@@ -39,7 +50,8 @@ export default class Corporation {
       levelId: this.levelId,
       lastMailAt: this.lastMailAt?.toISO(),
       buildingCount: this.buildingCount,
-      companyIds: Array.from(this.companyIds)
+      companyIds: Array.from(this.companyIds),
+      cash: this.cash
     };
   }
 
@@ -51,7 +63,8 @@ export default class Corporation {
       name: this.name,
       levelId: this.levelId,
       buildingCount: this.buildingCount,
-      companies: _.map(companies, (company) => company.toJsonApi())
+      companies: _.map(companies, (company) => company.toJsonApi()),
+      cash: this.cash
     };
   }
 
@@ -64,7 +77,8 @@ export default class Corporation {
       json.levelId,
       json.lastMailAt ? DateTime.fromISO(json.lastMailAt) : null,
       parseInt(json.buildingCount ?? 0),
-      new Set(Array.isArray(json.companyIds) ? json.companyIds : [])
+      new Set(Array.isArray(json.companyIds) ? json.companyIds : []),
+      json.cash
     );
   }
 }

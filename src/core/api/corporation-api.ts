@@ -1,10 +1,10 @@
 import _ from 'lodash';
 import express from 'express';
+import Filter from 'bad-words';
 import { DateTime } from 'luxon';
+import winston from 'winston';
 
-import { Level } from '@starpeace/starpeace-assets-types';
-
-import GalaxyManager from '../galaxy-manager';
+import GalaxyManager, { CoreConfigurations, PlanetMetadata } from '../galaxy-manager';
 import ModelEventClient from '../events/model-event-client';
 import { ApiCaches } from './api-factory';
 
@@ -19,11 +19,13 @@ import Utils from '../../utils/utils';
 import CompanyCache from '../../company/company-cache';
 
 export default class CorporationApi {
+  logger: winston.Logger;
   galaxyManager: GalaxyManager;
   modelEventClient: ModelEventClient;
   caches: ApiCaches;
 
-  constructor (galaxyManager: GalaxyManager, modelEventClient: ModelEventClient, caches: ApiCaches) {
+  constructor (logger: winston.Logger, galaxyManager: GalaxyManager, modelEventClient: ModelEventClient, caches: ApiCaches) {
+    this.logger = logger;
     this.galaxyManager = galaxyManager;
     this.modelEventClient = modelEventClient;
     this.caches = caches;
@@ -42,8 +44,8 @@ export default class CorporationApi {
         return res.json(corporation.toJsonApi(companies));
       }
       catch (err) {
-        console.error(err);
-        return res.status(500).json(err ?? {});
+        this.logger.error(err);
+        return res.status(500);
       }
     };
   }
@@ -63,8 +65,8 @@ export default class CorporationApi {
         }));
       }
       catch (err) {
-        console.error(err);
-        return res.status(500).json(err ?? {});
+        this.logger.error(err);
+        return res.status(500);
       }
     };
   }
@@ -93,8 +95,8 @@ export default class CorporationApi {
         }).filter(j => !!j));
       }
       catch (err) {
-        console.error(err);
-        return res.status(500).json(err ?? {});
+        this.logger.error(err);
+        return res.status(500);
       }
     };
   }
@@ -104,7 +106,7 @@ export default class CorporationApi {
       if (!req.planet || !req.visa) return res.status(400);
 
       const name: string = _.trim(req.body.name);
-      if (!name?.length) return res.status(400).json({ code: 'INVALID_NAME' });
+      if (name?.length < 3 || new Filter().isProfane(name)) return res.status(400).json({ code: 'INVALID_NAME' });
 
       try {
         const tycoonId: string = req.visa?.tycoonId;
@@ -112,19 +114,21 @@ export default class CorporationApi {
         if (corporations.find(corporation => corporation.tycoonId == tycoonId)) return res.status(400).json({ code: 'TYCOON_LIMIT' });
         if (corporations.find(corporation => corporation.name == name)) return res.status(400).json({ code: 'NAME_CONFLICT' });
 
-        const level: Level | null = this.galaxyManager.metadataCoreForPlanet(req.planet.id)?.lowestLevel ?? null;
-        if (!level) return res.status(500);
+        const planetMetadata: PlanetMetadata | null = this.galaxyManager.forPlanet(req.planet.id);
+        const coreMetadata: CoreConfigurations | null = this.galaxyManager.metadataCoreForPlanet(req.planet.id);
+        if (!planetMetadata || !coreMetadata || !coreMetadata.lowestLevel) {
+          this.logger.error(`Unable to find metadata for planet #{req.planet.id}`);
+          return res.status(500);
+        }
 
-        const corporation: Corporation = await this.modelEventClient.createCorporation(req.planet.id, new Corporation(Utils.uuid(), tycoonId, req.planet.id, name, level.id, null, 0, new Set()));
-        if (!corporation) return res.status(500);
-
+        const corporation: Corporation = await this.modelEventClient.createCorporation(req.planet.id, new Corporation(Utils.uuid(), tycoonId, req.planet.id, name, coreMetadata.lowestLevel.id, null, 0, new Set(), planetMetadata.corporationInitialCash));
         await this.modelEventClient.saveVisa(req.visa.withCorporationId(corporation.id));
 
         return res.json(corporation.toJsonApi([]));
       }
       catch (err) {
-        console.error(err);
-        return res.status(500).json(err ?? {});
+        this.logger.error(err);
+        return res.status(500);
       }
     };
   }
@@ -145,7 +149,7 @@ export default class CorporationApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }
@@ -157,7 +161,7 @@ export default class CorporationApi {
       if (req.body.type !== 'FOLDER' && req.body.type !== 'LOCATION' && req.body.type !== 'BUILDING') return res.status(400);
       if ((req.body.type == 'LOCATION' || req.body.type == 'BUILDING') && (!req.body.mapX || !req.body.mapY)) return res.status(400);
       if (req.body.type == 'BUILDING' && !req.body.buildingId?.length) return res.status(400);
-      if (!req.body.parentId?.length || !req.body.order) return res.status(400);
+      if (!req.body.parentId?.length || !_.isNumber(req.body.order)) return res.status(400);
 
       try {
         const corporation: Corporation | null = this.caches.corporation.withPlanet(req.planet).forId(req.params.corporationId);
@@ -170,7 +174,7 @@ export default class CorporationApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }
@@ -207,7 +211,7 @@ export default class CorporationApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }
@@ -227,7 +231,7 @@ export default class CorporationApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }
@@ -280,8 +284,8 @@ export default class CorporationApi {
           }).filter(t => !!t));
         }
 
-        if (!undeliverableNames.length) {
-          tasks.push(this.modelEventClient.sendMail(planetId, new Mail(Utils.uuid(), sourceTycoon.id, false, sentAt, planetSentAt, new MailEntity('ifel', 'IFEL'), [sourceTycoon].map(t => new MailEntity(t.id, t.name)), `Mail Undeliverable: ${subject}`, `Unable to deliver mail to ${undeliverableNames.join(', ')}`)));
+        if (undeliverableNames.length) {
+          tasks.push(this.modelEventClient.sendMail(planetId, new Mail(Utils.uuid(), sourceCorporation.id, false, sentAt, planetSentAt, new MailEntity('ifel', 'IFEL'), [sourceTycoon].map(t => new MailEntity(t.id, t.name)), `Mail Undeliverable: ${subject}`, `Unable to deliver mail to ${undeliverableNames.join(', ')}`)));
         }
 
         await Promise.all(tasks);
@@ -289,7 +293,7 @@ export default class CorporationApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }
@@ -311,7 +315,7 @@ export default class CorporationApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }
@@ -330,7 +334,7 @@ export default class CorporationApi {
       }
       catch (err) {
         console.error(err);
-        return res.status(500).json(err ?? {});
+        return res.status(500);
       }
     };
   }
