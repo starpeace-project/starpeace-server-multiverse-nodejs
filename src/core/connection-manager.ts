@@ -1,5 +1,6 @@
 import { Socket } from 'net';
 import socketio from 'socket.io';
+import winston from 'winston';
 
 export class ConnectionInformation {
   disconnectableSocketIds: Array<string> = [];
@@ -42,10 +43,12 @@ export class ConnectionState {
 }
 
 export default class ConnectionManager {
+  logger: winston.Logger
   state: ConnectionState;
   io: socketio.Server;
 
-  constructor (io: socketio.Server) {
+  constructor (logger: winston.Logger, io: socketio.Server) {
+    this.logger = logger;
     this.state = new ConnectionState();
     this.io = io;
   }
@@ -58,12 +61,12 @@ export default class ConnectionManager {
     this.state.running = false;
 
     for (const [socketId, socket] of Object.entries(this.io.sockets.sockets)) {
-      console.log(`[HTTP Worker] Disconnecting socket ${socketId}`);
+      this.logger.info(`[HTTP Worker] Disconnecting socket ${socketId}`);
       socket.disconnect(true);
     }
 
     for (const [key, connection] of Object.entries(this.state.openConnectionsByRemoteKey)) {
-      console.log(`[HTTP Worker] Destroying connection from ${key}`);
+      this.logger.info(`[HTTP Worker] Destroying connection from ${key}`);
       connection.destroy();
     }
   }
@@ -86,7 +89,7 @@ export default class ConnectionManager {
   disconnectSocket (socketId: string): void {
     const socket: socketio.Socket | undefined = this.io.sockets.sockets.get(socketId);
     if (socket) {
-      console.log(`[HTTP Worker] Forcefully disconnecting socket ${socketId}`);
+      this.logger.info(`[HTTP Worker] Forcefully disconnecting socket ${socketId}`);
       socket.disconnect(true);
     }
 

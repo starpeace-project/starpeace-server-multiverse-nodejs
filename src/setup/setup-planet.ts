@@ -1,16 +1,17 @@
-import BuildingStore from "../building/building-store";
-import CompanyStore from "../company/company-store";
-import InventionStore from "../company/invention-store";
 import { GalaxyMetadata, PlanetMetadata } from "../core/galaxy-manager";
 import BookmarkStore from "../corporation/bookmark-store";
+import BuildingStore from "../building/building-store";
+import CompanyStore from "../company/company-store";
 import CorporationStore from "../corporation/corporation-store";
+import InventionSummaryStore from "../company/invention-summary-store";
 import MailStore from "../corporation/mail-store";
 import RankingsStore from "../corporation/rankings-store";
 import PlanetStore from "../planet/planet-store";
 import TownStore from "../planet/town-store";
-import { SetupConfigurations } from "../setup";
 import TycoonStore from "../tycoon/tycoon-store";
 import TycoonTokenStore from "../tycoon/tycoon-token-store";
+
+import { SetupConfigurations } from "../setup";
 import SetupPlanetMetadata from "./setup-planet-metadata";
 import SetupSimulation from "./setup-simulation";
 import SetupTowns from "./setup-towns";
@@ -19,7 +20,7 @@ import SetupTowns from "./setup-towns";
 export interface SetupPlanetStores {
   building: BuildingStore;
   company: CompanyStore;
-  invention: InventionStore;
+  inventionSummary: InventionSummaryStore;
   bookmark: BookmarkStore;
   corporation: CorporationStore;
   mail: MailStore;
@@ -48,7 +49,7 @@ export default class SetupPlanet {
     this.stores = {
       building: new BuildingStore(false, this.planetMetadata.id),
       company: new CompanyStore(false, this.planetMetadata.id),
-      invention: new InventionStore(false, this.planetMetadata.id),
+      inventionSummary: new InventionSummaryStore(false, this.planetMetadata.id),
       bookmark: new BookmarkStore(false, this.planetMetadata.id),
       corporation: new CorporationStore(false, this.planetMetadata.id),
       mail: new MailStore(false, this.planetMetadata.id),
@@ -65,7 +66,7 @@ export default class SetupPlanet {
   }
 
   async export () {
-    this.metadata.export(this.planetMetadata.id);
+    this.metadata.export(this.planetMetadata.id, this.planetMetadata.mapId);
 
     await this.simulation.export();
     await this.towns.export(this.planetMetadata.id, this.planetMetadata.mapId);
@@ -73,7 +74,7 @@ export default class SetupPlanet {
     await Promise.all([
       this.stores.building.close(),
       this.stores.company.close(),
-      this.stores.invention.close(),
+      this.stores.inventionSummary.close(),
       this.stores.bookmark.close(),
       this.stores.corporation.close(),
       this.stores.mail.close(),

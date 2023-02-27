@@ -1,32 +1,55 @@
+import { BuildingImageDefinition } from '@starpeace/starpeace-assets-types';
+
 import Building from '../building/building';
 import BuildingDao from '../building/building-dao';
+import { BuildingConfigurations } from '../core/galaxy-manager';
 import TownCache from '../planet/town-cache';
 import Utils from '../utils/utils';
 
 export default class BuildingCache {
   dao: BuildingDao;
   townCache: TownCache;
+  planetWidth: number;
+  buildingConfigurations: BuildingConfigurations;
 
   loaded: boolean = false;
   dirtyIds: Set<string> = new Set();
 
-  byId: Record<string, Building>;
+  byId: Record<string, Building> = {};
 
-  idsByChunkId: Record<string, Set<string>>;
-  idsByCompanyId: Record<string, Set<string>>;
-  idsByTownId: Record<string, Set<string>>;
+  idByPositionIndex: Record<number, string> = {}
+  idsByChunkId: Record<string, Set<string>> = {};
+  idsByCompanyId: Record<string, Set<string>> = {};
+  idsByTownId: Record<string, Set<string>> = {};
 
-  constructor (dao: BuildingDao, townCache: TownCache) {
+  constructor (dao: BuildingDao, planetWidth: number, buildingConfigurations: BuildingConfigurations, townCache: TownCache) {
     this.dao = dao;
+    this.planetWidth = planetWidth;
+    this.buildingConfigurations = buildingConfigurations;
     this.townCache = townCache;
-    this.byId = {};
-    this.idsByChunkId = {};
-    this.idsByCompanyId = {};
-    this.idsByTownId = {};
   }
 
   close (): Promise<any> {
     return this.dao.close();
+  }
+
+  flush (): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.dirtyIds.size) {
+        return resolve();
+      }
+
+      Promise.all(Array.from(this.dirtyIds).map(id => {
+        return this.dao.set(this.byId[id]);
+      }))
+        .then((buildings: Building[]) => {
+          for (const building of buildings) {
+            this.dirtyIds.delete(building.id);
+          }
+        })
+        .then(resolve)
+        .catch(reject);
+    });
   }
 
   load (): Promise<void> {
@@ -42,6 +65,15 @@ export default class BuildingCache {
 
   loadBuilding (building: Building): Building {
     this.byId[building.id] = building;
+
+    const imageDefinition: BuildingImageDefinition | null = this.buildingConfigurations.imageForDefinitionId(building.definitionId);
+    if (imageDefinition) {
+      for (let y = 0; y < imageDefinition.tileHeight; y++) {
+        for (let x = 0; x < imageDefinition.tileWidth; x++) {
+          this.idByPositionIndex[(building.mapY - y) * this.planetWidth + (building.mapX - x)] = building.id;
+        }
+      }
+    }
 
     if (!this.idsByChunkId[building.chunkId]) this.idsByChunkId[building.chunkId] = new Set();
     this.idsByChunkId[building.chunkId].add(building.id)
@@ -80,4 +112,14 @@ export default class BuildingCache {
     }
   }
 
+  isPositionOccupied (mapX: number, mapY: number, width: number, height: number): boolean {
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        if (this.idByPositionIndex[(mapY - y) * this.planetWidth + (mapX - x)]) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
 }

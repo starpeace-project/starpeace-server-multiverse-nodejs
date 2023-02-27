@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import Utils from '../utils/utils';
 
 // import BuildingDefinition from './building-definition';
 // import SimulationDefinition from './simulation/simulation-definition';
@@ -109,12 +110,27 @@ export default class Building {
       json.tycoonId,
       json.corporationId,
       json.companyId,
-      json.townId,
       json.definitionId,
+      json.townId,
       json.name ?? null,
       json.mapX,
       json.mapY,
       json.stage ?? 0
+    );
+  }
+
+  static create (tycoonId: string, corporationId: string, companyId: string, definitionId: string, townId: string, name: string | null, mapX: number, mapY: number): Building {
+    return new Building(
+      Utils.uuid(),
+      tycoonId,
+      corporationId,
+      companyId,
+      definitionId,
+      townId,
+      name ?? null,
+      mapX,
+      mapY,
+      -1
     );
   }
 }

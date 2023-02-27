@@ -13,6 +13,10 @@ export default class Planet {
     };
   }
 
+  get planetTime (): string {
+    return this.time.toISO({ suppressSeconds: true, suppressMilliseconds: true, includeOffset: false });
+  }
+
   get season (): string {
     if (this.time.month == 12 || this.time.month == 1 || this.time.month == 2) return 'winter';
     if (this.time.month == 3 || this.time.month == 4 || this.time.month == 5) return 'spring';

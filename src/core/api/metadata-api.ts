@@ -1,12 +1,15 @@
 import express from 'express';
+import winston from 'winston';
 
-import GalaxyManager, { CoreConfigurations } from '../galaxy-manager';
+import GalaxyManager, { BuildingConfigurations, CoreConfigurations, InventionConfigurations } from '../galaxy-manager';
 
 
 export default class MetadataApi {
+  logger: winston.Logger;
   galaxyManager: GalaxyManager;
 
-  constructor (galaxyManager: GalaxyManager) {
+  constructor (logger: winston.Logger, galaxyManager: GalaxyManager) {
+    this.logger = logger;
     this.galaxyManager = galaxyManager;
   }
 
@@ -14,9 +17,9 @@ export default class MetadataApi {
   getBuildings (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
       if (!req.planet) return res.status(400);
-      const buildingMetadata: any | null = this.galaxyManager.metadataBuildingForPlanet(req.planet.id);
+      const buildingMetadata: BuildingConfigurations | null = this.galaxyManager.metadataBuildingForPlanet(req.planet.id);
       if (!buildingMetadata) return res.status(400);
-      return res.json(buildingMetadata);
+      return res.json(buildingMetadata.toJson());
     };
   }
 
@@ -32,9 +35,9 @@ export default class MetadataApi {
   getInventions (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
       if (!req.planet) return res.status(400);
-      const inventionMetadata: any | null = this.galaxyManager.metadataInventionForPlanet(req.planet.id);
+      const inventionMetadata: InventionConfigurations | null = this.galaxyManager.metadataInventionForPlanet(req.planet.id);
       if (!inventionMetadata) return res.status(400);
-      return res.json(inventionMetadata);
+      return res.json(inventionMetadata.toJson());
     };
   }
 

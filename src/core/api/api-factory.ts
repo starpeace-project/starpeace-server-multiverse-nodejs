@@ -28,12 +28,14 @@ import CacheByPlanet from '../../planet/cache-by-planet';
 import BuildingCache from '../../building/building-cache';
 import CompanyCache from '../../company/company-cache';
 import CorporationCache from '../../corporation/corporation-cache';
+import InventionSummaryCache from '../../company/invention-summary-cache';
 import PlanetCache from '../../planet/planet-cache';
 import RankingsCache from '../../corporation/rankings-cache';
 import TownCache from '../../planet/town-cache';
 import TycoonCache from '../../tycoon/tycoon-cache';
 import TycoonManager from '../../tycoon/tycoon-manager';
 import TycoonVisaCache from '../../tycoon/tycoon-visa-cache';
+import MapCache from '../../planet/map-cache';
 
 
 const DEFAULT_TIMEOUT_IN_MS = 10 * 1000;
@@ -45,6 +47,8 @@ export interface ApiCaches {
   building: CacheByPlanet<BuildingCache>;
   company: CacheByPlanet<CompanyCache>;
   corporation: CacheByPlanet<CorporationCache>;
+  inventionSummary: CacheByPlanet<InventionSummaryCache>;
+  map: CacheByPlanet<MapCache>;
   planet: CacheByPlanet<PlanetCache>;
   rankings: CacheByPlanet<RankingsCache>;
   town: CacheByPlanet<TownCache>;
@@ -145,13 +149,13 @@ export default class ApiFactory {
       })(req, res, next);
     };
 
-    const buildingApi = new BuildingApi(galaxyManager, modelEventClient, caches);
-    const companyApi = new CompanyApi(galaxyManager, modelEventClient, caches);
+    const buildingApi = new BuildingApi(logger, galaxyManager, modelEventClient, caches);
+    const companyApi = new CompanyApi(logger, galaxyManager, modelEventClient, caches);
     const corporationApi = new CorporationApi(logger, galaxyManager, modelEventClient, caches);
-    const galaxyApi = new GalaxyApi(galaxyManager, modelEventClient, caches);
-    const metadataApi = new MetadataApi(galaxyManager);
-    const planetApi = new PlanetApi(galaxyManager, modelEventClient, caches);
-    const tycoonApi = new TycoonApi(galaxyManager, modelEventClient, caches);
+    const galaxyApi = new GalaxyApi(logger, galaxyManager, modelEventClient, caches);
+    const metadataApi = new MetadataApi(logger, galaxyManager);
+    const planetApi = new PlanetApi(logger, galaxyManager, modelEventClient, caches);
+    const tycoonApi = new TycoonApi(logger, galaxyManager, modelEventClient, caches);
 
     const verifyPlanet = planetApi.verifyPlanet();
     const verifyTycoon = planetApi.verifyVisa(true);
@@ -171,6 +175,7 @@ export default class ApiFactory {
     app.get('/metadata/inventions', authenticate, verifyPlanet, verifyVisa, metadataApi.getInventions());
 
     app.get('/buildings', authenticate, verifyPlanet, verifyVisa, buildingApi.getBuildings());
+    app.post('/buildings', authenticate, verifyPlanet, verifyTycoon, buildingApi.createBuilding());
     app.get('/buildings/:buildingId', authenticate, verifyPlanet, verifyVisa, buildingApi.getBuilding());
 
     app.get('/corporations', authenticate, verifyPlanet, verifyVisa, corporationApi.getPlanetCorporations());
@@ -179,7 +184,6 @@ export default class ApiFactory {
     app.get('/corporations/:corporationId/bookmarks', authenticate, verifyPlanet, verifyTycoon, corporationApi.getBookmarks());
     app.post('/corporations/:corporationId/bookmarks', authenticate, verifyPlanet, verifyTycoon, corporationApi.createBookmark());
     app.patch('/corporations/:corporationId/bookmarks', authenticate, verifyPlanet, verifyTycoon, corporationApi.updateBookmarks());
-    // app.get('/corporations/:corporationId/cashflow', authenticate, verifyPlanet, verifyTycoon, corporationApi.getCashflow());
     app.get('/corporations/:corporationId/mail', authenticate, verifyPlanet, verifyTycoon, corporationApi.getMail());
     app.post('/corporations/:corporationId/mail', authenticate, verifyPlanet, verifyTycoon, corporationApi.sendMail());
     app.put('/corporations/:corporationId/mail/:mailId/mark-read', authenticate, verifyPlanet, verifyTycoon, corporationApi.markMailRead());
@@ -192,7 +196,6 @@ export default class ApiFactory {
     app.delete('/companies/:companyId/inventions/:inventionId', authenticate, verifyPlanet, verifyTycoon, companyApi.sellInvention());
 
     app.get('/details', authenticate, verifyPlanet, verifyVisa, planetApi.getPlanetDetails());
-    // app.get('/events', authenticate, verifyPlanet, verifyVisa, planetApi.getEvents());
     app.get('/online', authenticate, verifyPlanet, verifyVisa, planetApi.getOnline());
     app.get('/overlay/:typeId', authenticate, verifyPlanet, verifyVisa, planetApi.getOverlay());
     app.get('/rankings/:rankingTypeId', authenticate, verifyPlanet, verifyVisa, planetApi.getRankings());

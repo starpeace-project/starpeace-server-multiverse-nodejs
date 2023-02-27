@@ -2,9 +2,10 @@ import _ from 'lodash';
 import * as sqlite3 from 'sqlite3';
 
 import Town from '../planet/town';
+import TownDao from './town-dao';
 
 
-export default class TownStore {
+export default class TownStore implements TownDao {
   readOnly: boolean;
   db: sqlite3.Database;
 
@@ -46,7 +47,7 @@ export default class TownStore {
     });
   }
 
-  set (town: Town): Promise<Town[]> {
+  set (town: Town): Promise<Town> {
     return new Promise((resolve: Function, reject: Function) => {
       if (this.readOnly) return reject('READ_ONLY');
       this.db.run("INSERT OR REPLACE INTO towns (id, content) VALUES (?, ?)", [town.id, JSON.stringify(town.toJson())], (err: Error) => {

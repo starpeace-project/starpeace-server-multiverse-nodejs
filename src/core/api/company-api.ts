@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import express from 'express';
 import Filter from 'bad-words';
-import { DateTime } from 'luxon';
+import winston from 'winston';
 
 import GalaxyManager from '../galaxy-manager';
 import ModelEventClient from '../events/model-event-client';
@@ -9,18 +9,19 @@ import { ApiCaches } from './api-factory';
 
 import Building from '../../building/building';
 import Company from '../../company/company';
-import Invention from '../../company/invention';
+import CompanyCache from '../../company/company-cache';
+import InventionSummary from '../../company/invention-summary';
 import Town from '../../planet/town';
 
-import Utils from '../../utils/utils';
-import CompanyCache from '../../company/company-cache';
 
 export default class CompanyApi {
+  logger: winston.Logger;
   galaxyManager: GalaxyManager;
   modelEventClient: ModelEventClient;
   caches: ApiCaches;
 
-  constructor (galaxyManager: GalaxyManager, modelEventClient: ModelEventClient, caches: ApiCaches) {
+  constructor (logger: winston.Logger, galaxyManager: GalaxyManager, modelEventClient: ModelEventClient, caches: ApiCaches) {
+    this.logger = logger;
     this.galaxyManager = galaxyManager;
     this.modelEventClient = modelEventClient;
     this.caches = caches;
@@ -28,7 +29,7 @@ export default class CompanyApi {
 
   createCompany (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
-      if (!req.planet || !req.visa || !req.visa.corporationId) return res.status(400);
+      if (!req.planet || !req.visa || !req.visa.corporationId) return res.status(400).json({});
 
       const name = _.trim(req.body.name);
       if (name?.length < 3 || new Filter().isProfane(name)) return res.status(400).json({ code: 'INVALID_NAME' });
@@ -42,13 +43,13 @@ export default class CompanyApi {
         if (companies.filter(company => company.tycoonId == tycoonId).length > 25) return res.status(400).json({ code: 'TYCOON_LIMIT' });
         if (!!companies.find(company => company.name == name)) return res.status(400).json({ code: 'NAME_CONFLICT' });
 
-        const company: Company = await this.modelEventClient.createCompany(req.planet.id, new Company(Utils.uuid(), req.planet.id, tycoonId, req.visa.corporationId, seal.id, name));
-        if (!company) return res.status(500);
+        const company: Company = await this.modelEventClient.createCompany(req.planet.id, Company.create(req.planet.id, tycoonId, req.visa.corporationId, seal.id, name));
+        if (!company) return res.status(500).json({});
         return res.json(company.toJsonApi());
       }
       catch (err) {
-        console.error(err);
-        return res.status(500);
+        this.logger.error(err);
+        return res.status(500).json({});
       }
     };
   }
@@ -67,7 +68,7 @@ export default class CompanyApi {
         return res.json(companies.map(c => c.toJsonApi()));
       }
       catch (err) {
-        console.error(err);
+        this.logger.error(err);
         return res.status(500);
       }
     };
@@ -82,31 +83,10 @@ export default class CompanyApi {
         if (!company) return res.status(404);
         if (!req.visa?.isTycoon || req.visa.corporationId !== company.corporationId) return res.status(403);
 
-        const completedIds: string[] = [];
-        const pendingInventions: any[] = [];
-        // TODO: add paging
-        const inventions: Invention[] = await this.modelEventClient.listCompanyInventions(req.planet.id, company.id);
-        for (let invention of _.orderBy(inventions, ['createdAt'], ['asc'])) {
-          if (invention.status == 'DONE') {
-            completedIds.push(invention.id);
-          }
-          else {
-            pendingInventions.push({
-              id: invention.id,
-              order: pendingInventions.length,
-              progress: invention.progress
-            });
-          }
-        }
-
-        return res.json({
-          companyId: company.id,
-          pendingInventions: pendingInventions,
-          completedIds: completedIds
-        })
+        return res.json(this.caches.inventionSummary.withPlanet(req.planet).forCompanyId(company.id).toJson());
       }
       catch (err) {
-        console.error(err);
+        this.logger.error(err);
         return res.status(500);
       }
     };
@@ -114,48 +94,54 @@ export default class CompanyApi {
 
   researchInvention (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
-      if (!req.planet || !req.params.companyId || !req.params.inventionId) return res.status(400);
+      if (!req.planet || !req.params.companyId || !req.params.inventionId) return res.status(400).json({});
 
       try {
         const company: Company | null = this.caches.company.withPlanet(req.planet).forId(req.params.companyId);
-        if (!company) return res.status(404);
-        if (!req.visa?.isTycoon || req.visa.corporationId !== company.corporationId) return res.status(403);
+        if (!company) return res.status(404).json({});
+        if (!req.visa?.isTycoon || req.visa.corporationId !== company.corporationId) return res.status(403).json({});
 
-        const inventionMetadata: any = this.galaxyManager.metadataInventionForPlanet(req.planet.id)?.inventionsById?.[req.params.inventionId];
-        if (!inventionMetadata) return res.status(404);
+        const inventionMetadata: any = this.galaxyManager.metadataInventionForPlanet(req.planet.id)?.definitionsById?.[req.params.inventionId];
+        if (!inventionMetadata) return res.status(404).json({});
 
-        const existingInvention: Invention = await this.modelEventClient.findInvention(req.planet.id, company.id, req.params.inventionId);
-        if (existingInvention) return res.status(400).json({ code: 'INVENTION_CONFLICT' });
+        const summary: InventionSummary = this.caches.inventionSummary.withPlanet(req.planet).forCompanyId(company.id);
+        if (summary.isCompleted(req.params.inventionId) || summary.isActive(req.params.inventionId) || summary.isPending(req.params.inventionId) || summary.isCanceled(req.params.inventionId)) {
+          return res.status(400).json({ code: 'INVENTION_CONFLICT' });
+        }
 
-        const invention: Invention = await this.modelEventClient.startResearch(req.planet.id, new Invention(inventionMetadata.id, company.id, 'RESEARCHING', 0, 0, 0, 0, DateTime.now()));
-        return res.json(invention.toJson());
+        const updatedSummary: InventionSummary = await this.modelEventClient.startResearch(req.planet.id, company.id, inventionMetadata.id);
+        return res.json(updatedSummary.toJson());
       }
       catch (err) {
-        console.error(err);
-        return res.status(500)
+        this.logger.error(err);
+        return res.status(500).json({});
       }
     };
   }
 
   sellInvention (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
-      if (!req.planet || !req.params.companyId || !req.params.inventionId) return res.status(400);
+      if (!req.planet || !req.params.companyId || !req.params.inventionId) return res.status(400).json({});
 
       try {
         const company: Company | null = this.caches.company.withPlanet(req.planet).forId(req.params.companyId);
-        if (!company) return res.status(404);
-        if (!req.visa?.isTycoon || req.visa.corporationId !== company.corporationId) return res.status(403);
+        if (!company) return res.status(404).json({});
+        if (!req.visa?.isTycoon || req.visa.corporationId !== company.corporationId) return res.status(403).json({});
 
-        const invention: Invention = await this.modelEventClient.findInvention(req.planet.id, company.id, req.params.inventionId);
-        if (!invention) return res.status(404);
-        if (!(invention.status == 'RESEARCHING' || invention.status == 'DONE')) return res.status(400);
+        const inventionMetadata: any = this.galaxyManager.metadataInventionForPlanet(req.planet.id)?.definitionsById?.[req.params.inventionId];
+        if (!inventionMetadata) return res.status(404).json({});
 
-        const inventionId: string = await this.modelEventClient.sellResearch(req.planet.id, company.id, req.params.inventionId);
-        return res.json({ inventionId: inventionId });
+        const summary: InventionSummary = this.caches.inventionSummary.withPlanet(req.planet).forCompanyId(company.id);
+        if (!summary.isCompleted(req.params.inventionId) && !summary.isActive(req.params.inventionId) && !summary.isPending(req.params.inventionId)) {
+          return res.status(400).json({ code: 'INVENTION_CONFLICT' });
+        }
+
+        const updatedSummary: InventionSummary = await this.modelEventClient.cancelResearch(req.planet.id, company.id, req.params.inventionId);
+        return res.json(updatedSummary.toJson());
       }
       catch (err) {
-        console.error(err);
-        return res.status(500);
+        this.logger.error(err);
+        return res.status(500).json({});
       }
     };
   }

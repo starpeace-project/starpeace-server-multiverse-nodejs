@@ -1,6 +1,7 @@
+import express from 'express';
 import passport from 'passport';
 import jwt from 'jsonwebtoken';
-import express from 'express';
+import winston from 'winston';
 
 import GalaxyManager from '../galaxy-manager';
 import ModelEventClient from '../events/model-event-client';
@@ -12,11 +13,13 @@ import Tycoon from '../../tycoon/tycoon';
 
 
 export default class GalaxyApi {
+  logger: winston.Logger;
   galaxyManager: GalaxyManager;
   modelEventClient: ModelEventClient;
   caches: ApiCaches;
 
-  constructor (galaxyManager: GalaxyManager, modelEventClient: ModelEventClient, caches: ApiCaches) {
+  constructor (logger: winston.Logger, galaxyManager: GalaxyManager, modelEventClient: ModelEventClient, caches: ApiCaches) {
+    this.logger = logger;
     this.galaxyManager = galaxyManager;
     this.modelEventClient = modelEventClient;
     this.caches = caches;
@@ -63,7 +66,7 @@ export default class GalaxyApi {
         });
       }
       catch (err) {
-        console.error(err);
+        this.logger.error(err);
         return res.status(500);
       }
     };
@@ -90,7 +93,7 @@ export default class GalaxyApi {
       return res.json({ id: user.id, username: user.username, name: user.name, accessToken: accessToken, refreshToken: token, corporations: corporations });
     }
     catch (err) {
-      console.error(err);
+      this.logger.error(err);
       return res.status(500).json(err);
     }
   }
@@ -103,7 +106,7 @@ export default class GalaxyApi {
           if (error === 'INVALID_NAME' || error === 'USERNAME_CONFLICT') {
             return res.status(400).json({ code: error });
           }
-          return res.status(500);
+          return res.status(500).json({});
         }
         if (!user) return res.status(401).json({ code: info.message });
         return await this.loginUser(req, res, next, user, req.body.rememberMe);
@@ -120,15 +123,15 @@ export default class GalaxyApi {
           return await this.loginUser(req, res, next, tycoon, true);
         }
         catch (err) {
-          console.error(err);
-          return res.status(500);
+          this.logger.error(err);
+          return res.status(500).json({});
         }
       }
       else {
         return passport.authenticate('login', { session: false }, async (err, user) => {
           if (err) {
-            console.error(err);
-            return res.status(500);
+            this.logger.error(err);
+            return res.status(500).json({});
           }
           if (!user) return res.status(401).json({ code: 'INVALID' });
           return await this.loginUser(req, res, next, user, req.body.rememberMe);
@@ -147,8 +150,8 @@ export default class GalaxyApi {
         return res.status(200).json({});
       }
       catch (err) {
-        console.error(err);
-        return res.status(500);
+        this.logger.error(err);
+        return res.status(500).json({});
       }
     };
   }

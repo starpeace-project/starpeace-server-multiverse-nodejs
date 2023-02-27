@@ -1,7 +1,8 @@
 import winston from 'winston';
 import { Subscriber } from 'zeromq';
 
-import SimulationEvent from './simulation-event';
+import SimulationFrame from '../../engine/simulation-frame';
+
 
 const SUBSCRIBE_PORT = 19170;
 
@@ -14,14 +15,14 @@ export default class SimulationEventSubscriber {
     this.subscriber = new Subscriber();
   }
 
-  async start (eventCallback: (event: SimulationEvent) => Promise<void>): Promise<void> {
+  async start (eventCallback: (event: SimulationFrame) => Promise<void>): Promise<void> {
     this.subscriber.connect(`tcp://127.0.0.1:${SUBSCRIBE_PORT}`);
     this.subscriber.subscribe('SIMULATION');
 
     this.logger.info(`Started Simulation Event Subscriber on port ${SUBSCRIBE_PORT}`);
     for await (const [topic, message] of this.subscriber) {
       if (topic.toString() !== 'SIMULATION') continue;
-      await eventCallback(SimulationEvent.fromJson(JSON.parse(message.toString())));
+      await eventCallback(SimulationFrame.fromJson(JSON.parse(message.toString())));
     }
   }
 

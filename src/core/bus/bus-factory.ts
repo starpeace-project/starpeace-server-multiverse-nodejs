@@ -2,23 +2,24 @@ import _ from 'lodash';
 import http from 'http';
 import jwt from 'jsonwebtoken';
 import socketio from 'socket.io';
+import winston from 'winston';
 
 import ConnectionManager from '../connection-manager';
 import ModelEventPublisher from '../events/model-event-publisher';
 import { HttpServerCaches } from '../http-server';
+import SimulationFrame from '../../engine/simulation-frame';
 
 import GalaxyManager from '../galaxy-manager';
-import SimulationEvent from '../events/simulation-event';
 
 import Company from '../../company/company';
 import CompanyCache from '../../company/company-cache';
 import Corporation from '../../corporation/corporation';
 import CorporationCache from '../../corporation/corporation-cache';
+import InventionSummaryCache from '../../company/invention-summary-cache';
 import Planet from '../../planet/planet';
 import PlanetCache from '../../planet/planet-cache';
 import Tycoon from '../../tycoon/tycoon';
 import TycoonVisa from '../../tycoon/tycoon-visa';
-import winston from 'winston';
 
 
 export default class BusFactory {
@@ -100,12 +101,12 @@ export default class BusFactory {
       const cashflowJson: any = !corporation ? null : {
         id: corporation.id,
         lastMailAt: corporation.lastMailAt?.toISO(),
-        cash: 0,
-        cashflow: 0,
+        cash: corporation.cash ?? 0,
+        cashflow: corporation.cashflow ?? 0,
         companies: companies.map((company) => {
           return {
             id: company.id,
-            cashflow: 0
+            cashflow: company.cashflow
           };
         })
       };
@@ -124,10 +125,29 @@ export default class BusFactory {
     });
   }
 
-  static notifySockets (logger: winston.Logger, caches: HttpServerCaches, event: SimulationEvent, socketsByTycoonId: Record<string, socketio.Socket>): void {
+  static notifySockets (logger: winston.Logger, caches: HttpServerCaches, event: SimulationFrame, socketsByTycoonId: Record<string, socketio.Socket>): void {
     const planet: Planet = caches.planet.withPlanetId(event.planetId).update(event.planet);
     const corporationCache: CorporationCache = caches.corporation.withPlanetId(event.planetId);
     const companyCache: CompanyCache = caches.company.withPlanetId(event.planetId);
+    const inventionSummaryCache: InventionSummaryCache = caches.inventionSummary.withPlanetId(event.planetId);
+
+    for (const [corporationId, finances] of Object.entries(event.finances.financesByCorporationId)) {
+      corporationCache.updateFinances(corporationId, finances);
+    }
+    for (const [companyId, cashflow] of Object.entries(event.finances.cashflowByCompanyId)) {
+      companyCache.updateCashflow(companyId, cashflow);
+    }
+
+    for (const [companyId, inventionIds] of Object.entries(event.research.deletedInventionIdsByCompanyId)) {
+      inventionSummaryCache.updateDeleted(companyId, inventionIds);
+    }
+    for (const [companyId, inventionId] of Object.entries(event.research.completedInventionIdByCompanyId)) {
+      inventionSummaryCache.updateCompleted(companyId, inventionId);
+    }
+    for (const [companyId, research] of Object.entries(event.research.activeResearchByCompanyId)) {
+      inventionSummaryCache.updateActive(companyId, research.inventionId, research.investment);
+    }
+
 
     for (const [tycoonId, socket] of Object.entries(socketsByTycoonId)) {
       const tycoon: Tycoon | null = caches.tycoon.forId(tycoonId);
@@ -149,14 +169,16 @@ export default class BusFactory {
       const cashflowJson: any = !corporation ? null : {
         id: corporation.id,
         lastMailAt: corporation.lastMailAt?.toISO(),
-        cash: 0,
-        cashflow: 0,
+        cash: corporation.cash ?? 0,
+        cashflow: corporation.cashflow ?? 0,
         companies: companies.map((company) => {
           return {
             id: company.id,
-            cashflow: 0
+            cashflow: company.cashflow
           };
         })
+        // buildingEvents: []
+        // tycoonEvents: []
       };
 
       socket.emit('simulation', {
@@ -168,45 +190,5 @@ export default class BusFactory {
       });
     }
   }
-
-    // getCashflow: () -> (req, res, next) =>
-  //   return res.status(400) unless req.params.corporationId?
-  //   return res.status(403) unless req.visa?.isTycoon() && req.visa.corporationId == req.params.corporationId
-
-  //   try
-  //     corporation = await @corporationManager.forId(req.params.corporationId)
-  //     return res.status(404) unless corporation?
-
-  //     cashflow = {
-  //       id: corporation.id
-  //       lastMailAt: if corporation.lastMailAt? then corporation.lastMailAt.toISO() else null
-  //       cash: 0
-  //       cashflow: 0
-  //       companies: _.map(Array.from(corporation.companyIds), (companyId) -> {
-  //         id: companyId
-  //         cashflow: 0
-  //       })
-  //     }
-
-  //     res.json(cashflow)
-  //   catch err
-  //     console.error err
-  //     res.status(500).json(err || {})
-
-  // getEvents (): (req: express.Request, res: express.Response, next: any) => any {
-  //   return async (req: express.Request, res: express.Response, next: any) => {
-  //   return res.status(400) unless req.params.planetId?
-  //   return res.status(404) unless @galaxyManager.forPlanet(req.params.planetId)?
-  //   return res.status(404) unless @simulationStates[req.params.planetId]?
-  //   return res.status(403) unless req.visa? && req.visa.planetId == req.params.planetId
-
-  //   # FIXME: TODO: hookup event state
-  //   res.json({
-  //     planetId: req.params.planetId
-  //     time: @simulationStates[req.params.planetId].planetTime.toISO()
-  //     season: @simulationStates[req.params.planetId].season()
-  //     buildingEvents: []
-  //     tycoonEvents: []
-  //   })
 
 }

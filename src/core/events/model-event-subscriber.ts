@@ -3,21 +3,12 @@ import EventEmitter from 'events';
 import winston from 'winston';
 import { Subscriber } from 'zeromq';
 
-import ModelEventClient from './model-event-client';
-import CacheByPlanet from '../../planet/cache-by-planet';
-
-import Tycoon from '../../tycoon/tycoon';
-import TycoonCache from '../../tycoon/tycoon-cache';
-import TycoonSocketCache from '../../tycoon/tycoon-socket-cache';
-
 import Building from '../../building/building';
-import BuildingCache from '../../building/building-cache';
 import Company from '../../company/company';
-import CompanyCache from '../../company/company-cache';
 import Corporation from '../../corporation/corporation';
-import CorporationCache from '../../corporation/corporation-cache';
-import TycoonVisaCache from '../../tycoon/tycoon-visa-cache';
+import Tycoon from '../../tycoon/tycoon';
 import TycoonVisa from '../../tycoon/tycoon-visa';
+import InventionSummary from '../../company/invention-summary';
 
 const ASYNC_SERVER_TO_CLIENT_PORT = 19166;
 
@@ -27,19 +18,10 @@ const SOCKET_SUBSCRIBER_TOPICS = [
   'COMPANY:UPDATE',
   'CORPORATION:UPDATE',
   'INVENTION:START', 'INVENTION:SELL',
+  'RESEARCH:START', 'RESEARCH:CANCEL', 'RESEARCH:DELETE',
   'TYCOON:UPDATE',
   'VISA:UPDATE', 'VISA:DELETE'
 ];
-
-export interface ModelEventSubscriberCaches {
-  tycoon: TycoonCache;
-  tycoonSocket: TycoonSocketCache;
-  tycoonVisa: TycoonVisaCache;
-
-  building: CacheByPlanet<BuildingCache>;
-  company: CacheByPlanet<CompanyCache>;
-  corporation: CacheByPlanet<CorporationCache>;
-}
 
 export default class ModelEventSubscriber {
   logger: winston.Logger;
@@ -47,18 +29,16 @@ export default class ModelEventSubscriber {
   events: EventEmitter;
 
   subscriberSocket: Subscriber;
-  modelEventClient: ModelEventClient;
 
-  constructor (logger: winston.Logger, modelEventClient: ModelEventClient) {
+  constructor (logger: winston.Logger) {
     this.logger = logger;
     this.running = false;
     this.events = new EventEmitter();
 
     this.subscriberSocket = new Subscriber();
-    this.modelEventClient = modelEventClient;
   }
 
-  async start (caches: ModelEventSubscriberCaches): Promise<void> {
+  async start (): Promise<void> {
     try {
       this.subscriberSocket.connect(`tcp://127.0.0.1:${ASYNC_SERVER_TO_CLIENT_PORT}`);
       this.subscriberSocket.subscribe(...SOCKET_SUBSCRIBER_TOPICS);
@@ -71,32 +51,37 @@ export default class ModelEventSubscriber {
         const type = topic.toString();
 
         if (type === 'SOCKET:CONNECT') {
-          caches.tycoonSocket.set(notification.tycoonId, notification.socketId);
+          this.events.emit('connectSocket', { tycoonId: notification.tycoonId, socketId: notification.socketId });
         }
         else if (type === 'SOCKET:DISCONNECT') {
-          caches.tycoonSocket.clearBySocketId(notification.socketId);
-          this.events.emit('disconnectSocket', notification.socketId);
+          this.events.emit('disconnectSocket', { socketId: notification.socketId });
         }
         else if (type === 'BUILDING:UPDATE') {
-          caches.building.withPlanetId(notification.planetId).update(Building.fromJson(notification.building));
+          this.events.emit('updateBuilding', { planetId: notification.planetId, building: Building.fromJson(notification.building) });
         }
         else if (type === 'COMPANY:UPDATE') {
-          caches.company.withPlanetId(notification.planetId).update(Company.fromJson(notification.company));
+          this.events.emit('updateCompany', { planetId: notification.planetId, company: Company.fromJson(notification.company) });
         }
         else if (type === 'CORPORATION:UPDATE') {
-          caches.corporation.withPlanetId(notification.planetId).update(Corporation.fromJson(notification.corporation));
+          this.events.emit('updateCorporation', { planetId: notification.planetId, corporation: Corporation.fromJson(notification.corporation) });
+        }
+        else if (type === 'RESEARCH:START') {
+          this.events.emit('startResearch', { planetId: notification.planetId, summary: InventionSummary.fromJson(notification.summary) });
+        }
+        else if (type === 'RESEARCH:CANCEL') {
+          this.events.emit('cancelResearch', { planetId: notification.planetId, summary: InventionSummary.fromJson(notification.summary) });
+        }
+        else if (type === 'RESEARCH:DELETE') {
+          this.events.emit('deleteResearch', { planetId: notification.planetId, companyId: notification.companyId, inventionId: notification.inventionId });
         }
         else if (type === 'TYCOON:UPDATE') {
-          caches.tycoon.loadTycoon(Tycoon.fromJson(notification.tycoon));
-        }
-        else if (type === 'TYCOON:UPDATE') {
-          caches.tycoon.loadTycoon(Tycoon.fromJson(notification.tycoon));
+          this.events.emit('updateTycoon', { tycoon: Tycoon.fromJson(notification.tycoon) });
         }
         else if (type === 'VISA:UPDATE') {
-          caches.tycoonVisa.set(TycoonVisa.fromJson(notification.visa));
+          this.events.emit('updateVisa', { visa: TycoonVisa.fromJson(notification.visa) });
         }
         else if (type === 'VISA:DELETE') {
-          caches.tycoonVisa.clearByVisaId(notification.visaId);
+          this.events.emit('deleteVisa', { visaId: notification.visaId });
         }
         else {
           this.logger.warn(`Model Event Subscriber received unknown event topic ${topic}`);

@@ -2,15 +2,10 @@ import _ from 'lodash';
 import * as sqlite3 from 'sqlite3';
 
 import Company from '../company/company';
+import CompanyDao from './company-dao';
 
 
-export interface CompanyDao {
-  close (): Promise<void>;
-
-  all (): Promise<Company[]>;
-}
-
-export default class CompanyStore {
+export default class CompanyStore implements CompanyDao {
   readOnly: boolean;
   db: sqlite3.Database;
 

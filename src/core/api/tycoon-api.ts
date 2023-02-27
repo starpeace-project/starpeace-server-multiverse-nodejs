@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import express from 'express';
+import winston from 'winston';
 
 import GalaxyManager from '../galaxy-manager';
 import ModelEventClient from '../events/model-event-client';
@@ -11,11 +12,13 @@ import Tycoon from '../../tycoon/tycoon';
 import CorporationCache from '../../corporation/corporation-cache';
 
 export default class TycoonApi {
+  logger: winston.Logger;
   galaxyManager: GalaxyManager;
   modelEventClient: ModelEventClient;
   caches: ApiCaches;
 
-  constructor (galaxyManager: GalaxyManager, modelEventClient: ModelEventClient, caches: ApiCaches) {
+  constructor (logger: winston.Logger, galaxyManager: GalaxyManager, modelEventClient: ModelEventClient, caches: ApiCaches) {
+    this.logger = logger;
     this.galaxyManager = galaxyManager;
     this.modelEventClient = modelEventClient;
     this.caches = caches;
@@ -43,7 +46,7 @@ export default class TycoonApi {
         });
       }
       catch (err) {
-        console.error(err);
+        this.logger.error(err);
         return res.status(500);
       }
     };
@@ -76,7 +79,7 @@ export default class TycoonApi {
         }).filter(j => !!j));
       }
       catch (err) {
-        console.error(err);
+        this.logger.error(err);
         return res.status(500);
       }
     };

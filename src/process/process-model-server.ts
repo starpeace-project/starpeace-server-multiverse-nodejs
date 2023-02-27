@@ -1,10 +1,10 @@
 import winston from 'winston';
-import 'winston-daily-rotate-file';
 
-import GalaxyManager from '../core/galaxy-manager';
+import GalaxyManager, { BuildingConfigurations, InventionConfigurations } from '../core/galaxy-manager';
 import ModelEventServer from '../core/events/model-event-server';
-import SimulationEvent from '../core/events/simulation-event';
 import SimulationEventSubscriber from '../core/events/simulation-event-subscriber';
+import SimulationFrame from '../engine/simulation-frame';
+import Logger from '../utils/logger';
 
 import TycoonCache from '../tycoon/tycoon-cache';
 import TycoonStore from '../tycoon/tycoon-store';
@@ -14,11 +14,13 @@ import TycoonVisaCache from '../tycoon/tycoon-visa-cache';
 import BuildingCache from '../building/building-cache';
 import BuildingStore from '../building/building-store';
 import BookmarkStore from '../corporation/bookmark-store';
+import CacheByPlanet from '../planet/cache-by-planet';
 import CompanyCache from '../company/company-cache';
 import CompanyStore from '../company/company-store';
 import CorporationCache from '../corporation/corporation-cache';
 import CorporationStore from '../corporation/corporation-store';
-import InventionStore from '../company/invention-store';
+import InventionSummaryCache from '../company/invention-summary-cache';
+import InventionSummaryStore from '../company/invention-summary-store';
 import MailStore from '../corporation/mail-store';
 import PlanetCache from '../planet/planet-cache';
 import PlanetStore from '../planet/planet-store';
@@ -26,34 +28,12 @@ import RankingsCache from '../corporation/rankings-cache';
 import RankingsStore from '../corporation/rankings-store';
 import TownCache from '../planet/town-cache';
 import TownStore from '../planet/town-store';
-import InventionCache from '../company/invention-cache';
-import CacheByPlanet from '../planet/cache-by-planet';
-
-const logger: winston.Logger = winston.createLogger({
-  transports: [new winston.transports.DailyRotateFile({
-    level: 'info',
-    filename: 'logs/process-model-server-%DATE%.log',
-    datePattern: 'YYYY-MM-DD',
-    zippedArchive: false,
-    maxSize: '20m',
-    maxFiles: '14d',
-    handleRejections: true,
-    handleExceptions: true
-  }), new winston.transports.Console({
-    handleRejections: true,
-    handleExceptions: true
-  })],
-  format: winston.format.combine(
-    winston.format.splat(),
-    winston.format.timestamp(),
-    winston.format.label({ label: "Model Server" }),
-    winston.format.printf(({ level, message, label, timestamp }) => `${timestamp} [${label}][${level}]: ${message}`)
-  ),
-  exitOnError: false
-});
 
 
-const galaxyManager = GalaxyManager.create();
+const logger: winston.Logger = Logger.createProcessLoggerModelServer();
+
+
+const galaxyManager = GalaxyManager.create(logger);
 const planetIds = galaxyManager.planets.map((p) => p.id);
 
 const tycoonStore = new TycoonStore(false);
@@ -72,8 +52,8 @@ const planetByPlanet = Object.fromEntries(planetIds.map((id) => [id, new PlanetC
 const rankingsByPlanet = Object.fromEntries(planetIds.map((id) => [id, new RankingsCache(new RankingsStore(false, id))]));
 const townByPlanet = Object.fromEntries(planetIds.map((id) => [id, new TownCache(new TownStore(false, id))]));
 
-const buildingByPlanet = Object.fromEntries(planetIds.map((id) => [id, new BuildingCache(new BuildingStore(false, id), townByPlanet[id])]));
-const inventionByPlanet = Object.fromEntries(planetIds.map((id) => [id, new InventionCache(new InventionStore(false, id), companyByPlanet[id])]));
+const buildingByPlanet = Object.fromEntries(planetIds.map((id) => [id, new BuildingCache(new BuildingStore(false, id), galaxyManager.forPlanetRequired(id).planetWidth, galaxyManager.metadataBuildingForPlanet(id) ?? new BuildingConfigurations([], [], []), townByPlanet[id])]));
+const inventionSummaryByPlanet = Object.fromEntries(planetIds.map((id) => [id, new InventionSummaryCache(new InventionSummaryStore(false, id), galaxyManager.metadataInventionForPlanet(id) ?? new InventionConfigurations([]), companyByPlanet[id])]));
 
 const caches = {
   tycoon: tycoonCache,
@@ -81,7 +61,7 @@ const caches = {
   building: new CacheByPlanet(buildingByPlanet),
   company: new CacheByPlanet(companyByPlanet),
   corporation: new CacheByPlanet(corporationByPlanet),
-  invention: new CacheByPlanet(inventionByPlanet),
+  inventionSummary: new CacheByPlanet(inventionSummaryByPlanet),
   planet: new CacheByPlanet(planetByPlanet),
   rankings: new CacheByPlanet(rankingsByPlanet),
   town: new CacheByPlanet(townByPlanet)
@@ -108,7 +88,7 @@ const loadData = async () => {
   // second load (depends on first)
   await Promise.all([
     ...caches.building.loadAll(),
-    ...caches.invention.loadAll()
+    ...caches.inventionSummary.loadAll()
   ]);
 
 };
@@ -117,13 +97,14 @@ const persistCaches = async () => {
   // save caches to disk every 5 minutes
   try {
     await Promise.all([
-      // tycoonCache.flush(),
-      // ...Object.values(buildingByPlanet).map((c) => c.flush()),
-      // ...Object.values(companyByPlanet).map((c) => c.flush()),
-      // ...Object.values(corporationByPlanet).map((c) => c.flush()),
+      tycoonCache.flush(),
+      ...Object.values(buildingByPlanet).map((c) => c.flush()),
+      ...Object.values(companyByPlanet).map((c) => c.flush()),
+      ...Object.values(corporationByPlanet).map((c) => c.flush()),
+      ...Object.values(inventionSummaryByPlanet).map((c) => c.flush()),
       ...Object.values(planetByPlanet).map((c) => c.flush()),
-      // ...Object.values(rankingsByPlanet).map((c) => c.flush()),
-      // ...Object.values(townByPlanet).map((c) => c.flush())
+      ...Object.values(rankingsByPlanet).map((c) => c.flush()),
+      ...Object.values(townByPlanet).map((c) => c.flush())
     ]);
   }
   catch (err) {
@@ -142,7 +123,7 @@ const closeResources = async () => {
     ...Object.values(bookmarkByPlanet).map((c) => c.close()),
     ...caches.company.closeAll(),
     ...caches.corporation.closeAll(),
-    ...caches.invention.closeAll(),
+    ...caches.inventionSummary.closeAll(),
     ...Object.values(mailByPlanet).map((c) => c.close()),
     ...caches.planet.closeAll(),
     ...caches.rankings.closeAll(),
@@ -162,12 +143,25 @@ process.on('SIGINT', async () => {
 });
 
 
-const handleEvent = async (event: SimulationEvent) => {
+const handleEvent = async (event: SimulationFrame) => {
   planetByPlanet[event.planetId]?.update(event.planet);
 
-  // for (let actor of event.updatedActors) {
-  //   actorCache.update(actor);
-  // }
+  for (const [corporationId, finances] of Object.entries(event.finances.financesByCorporationId)) {
+    corporationByPlanet[event.planetId]?.updateFinances(corporationId, finances);
+  }
+  for (const [companyId, cashflow] of Object.entries(event.finances.cashflowByCompanyId)) {
+    companyByPlanet[event.planetId]?.updateCashflow(companyId, cashflow);
+  }
+
+  for (const [companyId, inventionIds] of Object.entries(event.research.deletedInventionIdsByCompanyId)) {
+    inventionSummaryByPlanet[event.planetId]?.updateDeleted(companyId, inventionIds);
+  }
+  for (const [companyId, inventionId] of Object.entries(event.research.completedInventionIdByCompanyId)) {
+    inventionSummaryByPlanet[event.planetId]?.updateCompleted(companyId, inventionId);
+  }
+  for (const [companyId, research] of Object.entries(event.research.activeResearchByCompanyId)) {
+    inventionSummaryByPlanet[event.planetId]?.updateActive(companyId, research.inventionId, research.investment);
+  }
 };
 
 loadData()

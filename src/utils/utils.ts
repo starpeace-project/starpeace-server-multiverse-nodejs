@@ -46,5 +46,9 @@ export default class Utils {
     return lhs + Math.random() * (rhs - lhs);
   }
 
+  static currentMs (): number {
+    const hrTime = process.hrtime();
+    return hrTime[0] * 1000 + hrTime[1] / 1000000;
+  }
 }
 

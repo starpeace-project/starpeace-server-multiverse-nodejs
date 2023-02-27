@@ -103,7 +103,7 @@ export default class CorporationApi {
 
   createCorporation (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
-      if (!req.planet || !req.visa) return res.status(400);
+      if (!req.planet || !req.visa) return res.status(400).json({});
 
       const name: string = _.trim(req.body.name);
       if (name?.length < 3 || new Filter().isProfane(name)) return res.status(400).json({ code: 'INVALID_NAME' });
@@ -118,17 +118,17 @@ export default class CorporationApi {
         const coreMetadata: CoreConfigurations | null = this.galaxyManager.metadataCoreForPlanet(req.planet.id);
         if (!planetMetadata || !coreMetadata || !coreMetadata.lowestLevel) {
           this.logger.error(`Unable to find metadata for planet #{req.planet.id}`);
-          return res.status(500);
+          return res.status(500).json({});
         }
 
-        const corporation: Corporation = await this.modelEventClient.createCorporation(req.planet.id, new Corporation(Utils.uuid(), tycoonId, req.planet.id, name, coreMetadata.lowestLevel.id, null, 0, new Set(), planetMetadata.corporationInitialCash));
+        const corporation: Corporation = await this.modelEventClient.createCorporation(req.planet.id, Corporation.create(tycoonId, req.planet.id, name, coreMetadata.lowestLevel.id, planetMetadata.corporationInitialCash));
         await this.modelEventClient.saveVisa(req.visa.withCorporationId(corporation.id));
 
         return res.json(corporation.toJsonApi([]));
       }
       catch (err) {
         this.logger.error(err);
-        return res.status(500);
+        return res.status(500).json({});
       }
     };
   }
@@ -148,7 +148,7 @@ export default class CorporationApi {
         return res.json(bookmarks.map(b => b.toJson()));
       }
       catch (err) {
-        console.error(err);
+        this.logger.error(err);
         return res.status(500);
       }
     };
@@ -156,38 +156,38 @@ export default class CorporationApi {
 
   createBookmark (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
-      if (!req.planet || !req.params.corporationId) return res.status(400);
-      if (!req.visa?.isTycoon || req.visa.corporationId !== req.params.corporationId) return res.status(403);
-      if (req.body.type !== 'FOLDER' && req.body.type !== 'LOCATION' && req.body.type !== 'BUILDING') return res.status(400);
-      if ((req.body.type == 'LOCATION' || req.body.type == 'BUILDING') && (!req.body.mapX || !req.body.mapY)) return res.status(400);
-      if (req.body.type == 'BUILDING' && !req.body.buildingId?.length) return res.status(400);
-      if (!req.body.parentId?.length || !_.isNumber(req.body.order)) return res.status(400);
+      if (!req.planet || !req.params.corporationId) return res.status(400).json({});
+      if (!req.visa?.isTycoon || req.visa.corporationId !== req.params.corporationId) return res.status(403).json({});
+      if (req.body.type !== 'FOLDER' && req.body.type !== 'LOCATION' && req.body.type !== 'BUILDING') return res.status(400).json({});
+      if ((req.body.type == 'LOCATION' || req.body.type == 'BUILDING') && (!req.body.mapX || !req.body.mapY)) return res.status(400).json({});
+      if (req.body.type == 'BUILDING' && !req.body.buildingId?.length) return res.status(400).json({});
+      if (!req.body.parentId?.length || !_.isNumber(req.body.order)) return res.status(400).json({});
 
       try {
         const corporation: Corporation | null = this.caches.corporation.withPlanet(req.planet).forId(req.params.corporationId);
-        if (!corporation) return res.status(404);
+        if (!corporation) return res.status(404).json({});
 
         const bookmarks: Bookmark[] = await this.modelEventClient.saveBookmarks(req.planet.id, [new Bookmark(Utils.uuid(), corporation.id, req.body.type, req.body.parentId, req.body.order, req.body.name, req.body.mapX, req.body.mapY, req.body.buildingId)]);
-        if (bookmarks.length < 1) return res.status(500);
+        if (bookmarks.length < 1) return res.status(500).json({});
 
         return res.json(bookmarks[0].toJson());
       }
       catch (err) {
-        console.error(err);
-        return res.status(500);
+        this.logger.error(err);
+        return res.status(500).json({});
       }
     };
   }
 
   updateBookmarks (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
-      if (!req.planet || !req.params.corporationId) return res.status(400);
-      if (!req.body.deltas?.length) return res.status(400);
-      if (!req.visa?.isTycoon || req.visa.corporationId !== req.params.corporationId) return res.status(403);
+      if (!req.planet || !req.params.corporationId) return res.status(400).json({});
+      if (!req.body.deltas?.length) return res.status(400).json({});
+      if (!req.visa?.isTycoon || req.visa.corporationId !== req.params.corporationId) return res.status(403).json({});
 
       try {
         const corporation: Corporation | null = this.caches.corporation.withPlanet(req.planet).forId(req.params.corporationId);
-        if (!corporation) return res.status(404);
+        if (!corporation) return res.status(404).json({});
 
         // TODO: add paging, and/or improve approach
         const bookmarks: Bookmark[] = await this.modelEventClient.bookmarksForCorporation(req.planet.id, corporation.id);
@@ -204,14 +204,14 @@ export default class CorporationApi {
           return bookmarksById[delta.id];
         }).filter((b: Bookmark) => !!b) as Bookmark[];
 
-        if (!toSave.length) return res.status(400);
+        if (!toSave.length) return res.status(400).json({});
 
         const savedBookmarks: Bookmark[] = await this.modelEventClient.saveBookmarks(req.planet.id, toSave);
         return res.json(savedBookmarks.map(b => b.toJson()));
       }
       catch (err) {
-        console.error(err);
-        return res.status(500);
+        this.logger.error(err);
+        return res.status(500).json({});
       }
     };
   }
@@ -230,7 +230,7 @@ export default class CorporationApi {
         return res.json(mails.map(m => m.toJson()));
       }
       catch (err) {
-        console.error(err);
+        this.logger.error(err);
         return res.status(500);
       }
     };
@@ -238,19 +238,19 @@ export default class CorporationApi {
 
   sendMail (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
-      if (!req.planet || !req.params.corporationId) return res.status(400);
-      if (!req.visa?.isTycoon || req.visa.corporationId !== req.params.corporationId) return res.status(403);
+      if (!req.planet || !req.params.corporationId) return res.status(400).json({});
+      if (!req.visa?.isTycoon || req.visa.corporationId !== req.params.corporationId) return res.status(403).json({});
 
       const planetId: string = req.planet.id;
       const subject: string = _.trim(req.body.subject);
       const body: string = _.trim(req.body.body);
-      if (!subject.length || !body.length) return res.status(400);
+      if (!subject.length || !body.length) return res.status(400).json({});
 
       try {
         const sourceCorporation: Corporation | null = this.caches.corporation.withPlanet(req.planet).forId(req.params.corporationId);
-        if (!sourceCorporation) return res.status(404);
+        if (!sourceCorporation) return res.status(404).json({});
         const sourceTycoon: Tycoon | null = this.caches.tycoon.forId(sourceCorporation.tycoonId);
-        if (!sourceTycoon) return res.status(404);
+        if (!sourceTycoon) return res.status(404).json({});
 
         const sentAt: DateTime = DateTime.utc();
         const planetSentAt: DateTime = this.caches.planet.withPlanet(req.planet).planet.time ?? sentAt;
@@ -273,7 +273,7 @@ export default class CorporationApi {
           }
         }
 
-        if (!targetTycoons.length && !undeliverableNames.length) return res.status(400);
+        if (!targetTycoons.length && !undeliverableNames.length) return res.status(400).json({});
 
         const tasks = [];
         if (targetTycoons.length) {
@@ -292,49 +292,49 @@ export default class CorporationApi {
         return res.json({});
       }
       catch (err) {
-        console.error(err);
-        return res.status(500);
+        this.logger.error(err);
+        return res.status(500).json({});
       }
     };
   }
 
   markMailRead (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
-      if (!req.planet || !req.params.corporationId || !req.params.mailId) return res.status(400);
-      if (!req.visa?.isTycoon || req.visa.corporationId !== req.params.corporationId) return res.status(403);
+      if (!req.planet || !req.params.corporationId || !req.params.mailId) return res.status(400).json({});
+      if (!req.visa?.isTycoon || req.visa.corporationId !== req.params.corporationId) return res.status(403).json({});
 
       try {
         const corporation: Corporation | null = this.caches.corporation.withPlanet(req.planet).forId(req.params.corporationId);
-        if (!corporation) return res.status(404);
+        if (!corporation) return res.status(404).json({});
 
         const mailId: string = await this.modelEventClient.markReadMail(req.planet.id, req.params.mailId);
         if (mailId !== req.params.mailId) {
-          return res.status(500);
+          return res.status(500).json({});
         }
         return res.json({});
       }
       catch (err) {
-        console.error(err);
-        return res.status(500);
+        this.logger.error(err);
+        return res.status(500).json({});
       }
     };
   }
 
   deleteMail (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
-      if (!req.planet || !req.params.corporationId || !req.params.mailId) return res.status(400);
-      if (!req.visa?.isTycoon || req.visa.corporationId !== req.params.corporationId) return res.status(403);
+      if (!req.planet || !req.params.corporationId || !req.params.mailId) return res.status(400).json({});
+      if (!req.visa?.isTycoon || req.visa.corporationId !== req.params.corporationId) return res.status(403).json({});
 
       try {
         const mailId: string = await this.modelEventClient.deleteMail(req.planet.id, req.params.mailId);
         if (mailId !== req.params.mailId) {
-          return res.status(500);
+          return res.status(500).json({});
         }
         return res.json({});
       }
       catch (err) {
-        console.error(err);
-        return res.status(500);
+        this.logger.error(err);
+        return res.status(500).json({});
       }
     };
   }

@@ -2,6 +2,8 @@ import _ from 'lodash';
 import winston from 'winston';
 import { Publisher, Reply, Subscriber } from 'zeromq';
 
+import { BuildingDefinition, BuildingImageDefinition } from '@starpeace/starpeace-assets-types';
+
 import Tycoon from '../../tycoon/tycoon';
 import TycoonCache from '../../tycoon/tycoon-cache';
 import TycoonStore from '../../tycoon/tycoon-store';
@@ -17,8 +19,8 @@ import Corporation from '../../corporation/corporation';
 import CorporationCache from '../../corporation/corporation-cache';
 import Company from '../../company/company';
 import CompanyCache from '../../company/company-cache';
-import Invention from '../../company/invention';
-import InventionCache from '../../company/invention-cache';
+import InventionSummary from '../../company/invention-summary';
+import InventionSummaryCache from '../../company/invention-summary-cache';
 import Mail from '../../corporation/mail';
 import MailStore from '../../corporation/mail-store';
 import PlanetCache from '../../planet/planet-cache';
@@ -55,7 +57,7 @@ export interface ModelEventServerCaches {
   building: CacheByPlanet<BuildingCache>;
   company: CacheByPlanet<CompanyCache>;
   corporation: CacheByPlanet<CorporationCache>;
-  invention: CacheByPlanet<InventionCache>;
+  inventionSummary: CacheByPlanet<InventionSummaryCache>;
   planet: CacheByPlanet<PlanetCache>;
   rankings: CacheByPlanet<RankingsCache>;
   town: CacheByPlanet<TownCache>;
@@ -210,36 +212,67 @@ export default class ModelEventServer {
         await this.publisherSocket.send(['COMPANY:UPDATE', JSON.stringify({ planetId: company.planetId, company: company.toJson() })])
       }
 
-      else if (request.type === 'RESEARCH:LIST') {
-        const inventions: Invention[] = this.caches.invention.withPlanetId(request.planetId).forCompanyId(request.companyId) ?? [];
-        await this.replySocket.send(JSON.stringify({ inventions: inventions.map(i => i.toJson()) }));
-      }
-      else if (request.type === 'RESEARCH:GET') {
-        const invention: Invention | null = this.caches.invention.withPlanetId(request.planetId).forId(request.inventionId);
-        await this.replySocket.send(JSON.stringify({ invention: invention?.toJson() }));
+      else if (request.type === 'RESEARCH:SUMMARY') {
+        const summary: InventionSummary = this.caches.inventionSummary.withPlanetId(request.planetId).forCompanyId(request.companyId);
+        await this.replySocket.send(JSON.stringify({ summary: summary?.toJson() }));
       }
       else if (request.type === 'RESEARCH:START') {
-        const invention: Invention = <Invention> this.caches.invention.withPlanetId(request.planetId).update(Invention.fromJson(request.invention));
-        await this.replySocket.send(JSON.stringify({ invention: invention.toJson() }));
-        await this.publisherSocket.send(['INVENTION:START', JSON.stringify({ planetId: request.planetId, invention: invention.toJson() })]);
-      }
-      else if (request.type === 'RESEARCH:SELL') {
-        const invention: Invention | null = this.caches.invention.withPlanetId(request.planetId).forId(request.inventionId);
-        if (!invention || invention.status == 'SELLING') {
-          await this.replySocket.send(JSON.stringify({ error: 'INVALID_INVENTION' }));
+        // TODO: verify has research unlocked by constructed building
+        const summary: InventionSummary = this.caches.inventionSummary.withPlanetId(request.planetId).forCompanyId(request.companyId);
+        if (summary.isCompleted(request.inventionId) || summary.isActive(request.inventionId) || summary.isPending(request.inventionId) || summary.isCanceled(request.inventionId)) {
+          await this.replySocket.send(JSON.stringify({ summary: summary.toJson() }));
         }
         else {
-          invention.status = 'SELLING';
-          this.caches.invention.withPlanetId(request.planetId).update(invention);
-
-          await this.replySocket.send(JSON.stringify({ invention: invention.toJson() }));
-          await this.publisherSocket.send(['INVENTION:SELL', JSON.stringify({ planetId: request.planetId, invention: invention.toJson() })]);
+          summary.pendingIds.push(request.inventionId);
+          this.caches.inventionSummary.withPlanetId(request.planetId).update(summary);
+          await this.replySocket.send(JSON.stringify({ summary: summary.toJson() }));
+          await this.publisherSocket.send(['RESEARCH:START', JSON.stringify({ planetId: request.planetId, summary: summary.toJson() })]);
+        }
+      }
+      else if (request.type === 'RESEARCH:CANCEL') {
+        const summary: InventionSummary = this.caches.inventionSummary.withPlanetId(request.planetId).forCompanyId(request.companyId);
+        if (!summary.isCanceled(request.inventionId) && (summary.isCompleted(request.inventionId) || summary.isActive(request.inventionId) || summary.isPending(request.inventionId))) {
+          summary.canceledIds.add(request.inventionId);
+          this.caches.inventionSummary.withPlanetId(request.planetId).update(summary);
+          await this.replySocket.send(JSON.stringify({ summary: summary.toJson() }));
+          await this.publisherSocket.send(['RESEARCH:CANCEL', JSON.stringify({ planetId: request.planetId, summary: summary.toJson() })]);
+        }
+        else {
+          await this.replySocket.send(JSON.stringify({ summary: summary.toJson() }));
         }
       }
 
       else if (request.type === 'BUILDING:LIST') {
         const buildings: Building[] = this.caches.building.withPlanetId(request.planetId).all() ?? [];
         await this.replySocket.send(JSON.stringify({ buildings: buildings.map(c => c.toJson()) }));
+      }
+      else if (request.type === 'BUILDING:CREATE') {
+        const building: Building = Building.fromJson(request.building);
+
+        const buildingCache = this.caches.building.withPlanetId(request.planetId);
+        const definition: BuildingDefinition | null = buildingCache.buildingConfigurations.definitionById[building.definitionId];
+        const imageDefinition: BuildingImageDefinition | null = definition ? buildingCache.buildingConfigurations.imageById[definition.imageId] : null;
+        if (!definition || !imageDefinition) {
+          await this.replySocket.send(JSON.stringify({ error: 'INVALID_DEFINITION' }));
+          continue;
+        }
+
+        const summary: InventionSummary = this.caches.inventionSummary.withPlanetId(request.planetId).forCompanyId(building.companyId);
+        if (definition.requiredInventionIds.length && !definition.requiredInventionIds.every(id => summary.completedIds.has(id))) {
+          await this.replySocket.send(JSON.stringify({ error: 'MISSING_RESEARCH' }));
+          continue;
+        }
+
+        if (buildingCache.isPositionOccupied(building.mapX, building.mapY, imageDefinition.tileWidth, imageDefinition.tileHeight)) {
+          await this.replySocket.send(JSON.stringify({ error: 'POSITION_OCCUPIED' }));
+          continue;
+        }
+
+        // TODO: check roads
+        buildingCache.update(building);
+
+        await this.replySocket.send(JSON.stringify({ building: building.toJson() }));
+        await this.publisherSocket.send(['BUILDING:UPDATE', JSON.stringify({ planetId: request.planetId, building: building.toJson() })])
       }
 
       else if (request.type === 'MAIL:LIST') {

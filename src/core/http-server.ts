@@ -1,17 +1,17 @@
 import _ from 'lodash';
 import http from 'http';
 import socketio from 'socket.io';
+import winston from 'winston';
 
 import ModelEventClient from './events/model-event-client';
 import ModelEventPublisher from './events/model-event-publisher';
 import ModelEventSubscriber from './events/model-event-subscriber';
-import SimulationEvent from './events/simulation-event';
 import SimulationEventSubscriber from './events/simulation-event-subscriber';
 
 import ApiFactory from './api/api-factory';
 import BusFactory from './bus/bus-factory';
 import ConnectionManager from './connection-manager';
-import GalaxyManager from './galaxy-manager';
+import GalaxyManager, { BuildingConfigurations, InventionConfigurations } from './galaxy-manager';
 import CacheByPlanet from '../planet/cache-by-planet';
 
 import TycoonCache from '../tycoon/tycoon-cache';
@@ -24,8 +24,8 @@ import CorporationCache from '../corporation/corporation-cache';
 import { asCorporationDao } from '../corporation/corporation-dao';
 import CompanyCache from '../company/company-cache';
 import { asCompanyDao } from '../company/company-dao';
-import InventionCache from '../company/invention-cache';
-import { asInventionDao } from '../company/invention-dao';
+import InventionSummaryCache from '../company/invention-summary-cache';
+import { asInventionSummaryDao } from '../company/invention-summary-dao';
 import PlanetCache from '../planet/planet-cache';
 import { asPlanetDao } from '../planet/planet-dao';
 import RankingsCache from '../corporation/rankings-cache';
@@ -34,7 +34,9 @@ import TownCache from '../planet/town-cache';
 import { asTownDao } from '../planet/town-dao';
 import TycoonVisaCache from '../tycoon/tycoon-visa-cache';
 import { asTycoonVisaDao } from '../tycoon/tycoon-visa-dao';
-import winston from 'winston';
+import SimulationFrame from '../engine/simulation-frame';
+import MapCache from '../planet/map-cache';
+
 
 export interface HttpServerCaches {
   tycoon: TycoonCache;
@@ -44,7 +46,8 @@ export interface HttpServerCaches {
   building: CacheByPlanet<BuildingCache>;
   company: CacheByPlanet<CompanyCache>;
   corporation: CacheByPlanet<CorporationCache>;
-  invention: CacheByPlanet<InventionCache>;
+  inventionSummary: CacheByPlanet<InventionSummaryCache>;
+  map: CacheByPlanet<MapCache>;
   planet: CacheByPlanet<PlanetCache>;
   rankings: CacheByPlanet<RankingsCache>;
   town: CacheByPlanet<TownCache>;
@@ -89,11 +92,11 @@ export default class HttpServer {
 
     this.modelEventClient = new ModelEventClient(this.logger);
     this.modelEventPublisher = new ModelEventPublisher(this.logger);
-    this.modelEventSubscriber = new ModelEventSubscriber(this.logger, this.modelEventClient);
+    this.modelEventSubscriber = new ModelEventSubscriber(this.logger);
 
     this.simulationSubscriber = new SimulationEventSubscriber(this.logger);
 
-    this.galaxyManager = GalaxyManager.create();
+    this.galaxyManager = GalaxyManager.create(this.logger);
     const planetIds: string[] = this.galaxyManager.planets.map((p) => p.id);
 
     const companyByPlanet: Record<string, CompanyCache> = Object.fromEntries(planetIds.map((id: string) => [id, new CompanyCache(asCompanyDao(this.modelEventClient, id))]));
@@ -102,19 +105,20 @@ export default class HttpServer {
       tycoon: new TycoonCache(asTycoonDao(this.modelEventClient)),
       tycoonSocket: new TycoonSocketCache(),
       tycoonVisa: new TycoonVisaCache(asTycoonVisaDao(this.modelEventClient)),
-      building: new CacheByPlanet(Object.fromEntries(planetIds.map((id: string) => [id, new BuildingCache(asBuildingDao(this.modelEventClient, id), townByPlanet[id])]))),
+      building: new CacheByPlanet(Object.fromEntries(planetIds.map((id: string) => [id, new BuildingCache(asBuildingDao(this.modelEventClient, id), this.galaxyManager.forPlanetRequired(id).planetWidth, this.galaxyManager.metadataBuildingForPlanet(id) ?? new BuildingConfigurations([], [], []), townByPlanet[id])]))),
       company: new CacheByPlanet(companyByPlanet),
       corporation: new CacheByPlanet(Object.fromEntries(planetIds.map((id: string) => [id, new CorporationCache(asCorporationDao(this.modelEventClient, id))]))),
-      invention: new CacheByPlanet(Object.fromEntries(planetIds.map((id: string) => [id, new InventionCache(asInventionDao(this.modelEventClient, id), companyByPlanet[id])]))),
+      inventionSummary: new CacheByPlanet(Object.fromEntries(planetIds.map((id: string) => [id, new InventionSummaryCache(asInventionSummaryDao(this.modelEventClient, id), this.galaxyManager.metadataInventionForPlanet(id) ?? new InventionConfigurations([]), companyByPlanet[id])]))),
+      map: new CacheByPlanet(Object.fromEntries(planetIds.map((id: string) => [id, new MapCache(this.galaxyManager.forPlanetRequired(id), townByPlanet[id])]))),
       planet: new CacheByPlanet(Object.fromEntries(planetIds.map((id: string) => [id, new PlanetCache(asPlanetDao(this.modelEventClient, id))]))),
       rankings: new CacheByPlanet(Object.fromEntries(planetIds.map((id: string) => [id, new RankingsCache(asRankingsDao(this.modelEventClient, id))]))),
-      town: new CacheByPlanet(townByPlanet),
+      town: new CacheByPlanet(townByPlanet)
     };
 
 
     this.server = ApiFactory.create(this.logger, this.galaxyManager, this.modelEventClient, this.caches);
     this.io = BusFactory.create(this.server, this.galaxyManager, this.caches);
-    this.connectionManager = new ConnectionManager(this.io);
+    this.connectionManager = new ConnectionManager(this.logger, this.io);
 
     this.configureEvents();
     this.loadCaches();
@@ -123,7 +127,20 @@ export default class HttpServer {
   configureEvents () {
     this.server.on('connection', (socket) => this.connectionManager.handleConnection(socket));
     BusFactory.configureEvents(this.logger, this.io, this.connectionManager, this.modelEventPublisher, this.caches);
-    this.modelEventClient.events.on('disconnectSocket', (socketId) => this.connectionManager.disconnectSocket(socketId));
+
+    this.modelEventSubscriber.events.on('connectSocket', (event) => this.caches.tycoonSocket.set(event.tycoonId, event.socketId));
+    this.modelEventSubscriber.events.on('disconnectSocket', (event) => {
+      this.caches.tycoonSocket.clearBySocketId(event.socketId);
+      this.connectionManager.disconnectSocket(event.socketId);
+    });
+    this.modelEventSubscriber.events.on('updateBuilding', (event) => this.caches.building.withPlanetId(event.planetId).update(event.building));
+    this.modelEventSubscriber.events.on('updateCompany', (event) => this.caches.company.withPlanetId(event.planetId).update(event.company));
+    this.modelEventSubscriber.events.on('updateCorporation', (event) => this.caches.corporation.withPlanetId(event.planetId).update(event.corporation));
+    this.modelEventSubscriber.events.on('updateTycoon', (event) => this.caches.tycoon.loadTycoon(event.tycoon));
+    this.modelEventSubscriber.events.on('updateVisa', (event) => this.caches.tycoonVisa.set(event.visa));
+    this.modelEventSubscriber.events.on('deleteVisa', (event) => this.caches.tycoonVisa.clearByVisaId(event.visaId));
+    this.modelEventSubscriber.events.on('startResearch', (event) => this.caches.inventionSummary.withPlanetId(event.planetId).update(event.summary));
+    this.modelEventSubscriber.events.on('cancelResearch', (event) => this.caches.inventionSummary.withPlanetId(event.planetId).update(event.summary));
   }
 
   async loadCaches () {
@@ -140,7 +157,8 @@ export default class HttpServer {
     // second load (depends on first load)
     await Promise.all([
       ...this.caches.building.loadAll(),
-      ...this.caches.invention.loadAll()
+      ...this.caches.inventionSummary.loadAll(),
+      ...this.caches.map.loadAll()
     ]);
   }
 
@@ -149,7 +167,8 @@ export default class HttpServer {
         !this.caches.building.loaded ||
         !this.caches.company.loaded ||
         !this.caches.corporation.loaded ||
-        !this.caches.invention.loaded ||
+        !this.caches.inventionSummary.loaded ||
+        !this.caches.map.loaded ||
         !this.caches.planet.loaded ||
         !this.caches.rankings.loaded ||
         !this.caches.town.loaded) {
@@ -164,7 +183,7 @@ export default class HttpServer {
     this.connectionManager.start();
     this.modelEventClient.start();
     this.modelEventPublisher.start();
-    this.modelEventSubscriber.start(this.caches);
+    this.modelEventSubscriber.start();
     this.simulationSubscriber.start((event) => this.notifySocketsWithSimulation(event));
 
     this.waitForSimulationState(() => {
@@ -193,7 +212,8 @@ export default class HttpServer {
         ...this.caches.building.closeAll(),
         ...this.caches.company.closeAll(),
         ...this.caches.corporation.closeAll(),
-        ...this.caches.invention.closeAll(),
+        ...this.caches.inventionSummary.closeAll(),
+        ...this.caches.map.closeAll(),
         ...this.caches.planet.closeAll(),
         ...this.caches.rankings.closeAll(),
         ...this.caches.town.closeAll()
@@ -208,7 +228,7 @@ export default class HttpServer {
     }
   }
 
-  async notifySocketsWithSimulation (event: SimulationEvent): Promise<void> {
+  async notifySocketsWithSimulation (event: SimulationFrame): Promise<void> {
     const info = this.connectionManager.connectionInformation();
     for (let socketId of info.disconnectableSocketIds) {
       await this.modelEventPublisher.disconnectSocket(socketId);

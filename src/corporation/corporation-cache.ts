@@ -1,5 +1,6 @@
 import Corporation from '../corporation/corporation';
-import { CorporationDao } from '../corporation/corporation-store';
+import CorporationDao from './corporation-dao';
+import { SimulationCorporationFinances } from '../engine/simulation-frame';
 import Utils from '../utils/utils';
 
 export default class CorporationCache {
@@ -31,6 +32,25 @@ export default class CorporationCache {
     });
   }
 
+  flush (): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.dirtyIds.size) {
+        return resolve();
+      }
+
+      Promise.all(Array.from(this.dirtyIds).map(id => {
+        return this.dao.set(this.byId[id]);
+      }))
+        .then((corporations: Corporation[]) => {
+          for (const corporation of corporations) {
+            this.dirtyIds.delete(corporation.id);
+          }
+        })
+        .then(resolve)
+        .catch(reject);
+    });
+  }
+
   loadCorporation (corporation: Corporation): Corporation {
     this.byId[corporation.id] = corporation;
     this.idByTycoonId[corporation.tycoonId] = corporation.id;
@@ -59,4 +79,9 @@ export default class CorporationCache {
     return corporationOrCorporations;
   }
 
+  updateFinances (corporationId: string, finances: SimulationCorporationFinances): Corporation | null {
+    const corporation: Corporation | null = this.forId(corporationId)?.withCash(finances.cash)?.withCashflow(finances.cashflow) ?? null;
+    if (corporation) this.dirtyIds.add(corporationId);
+    return corporation;
+  }
 }

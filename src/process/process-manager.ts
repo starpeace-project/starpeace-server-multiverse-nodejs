@@ -26,31 +26,9 @@ export default class ProcessManager {
   galaxyManager: GalaxyManager;
 
   constructor () {
-    this.logger = winston.createLogger({
-      transports: [new winston.transports.DailyRotateFile({
-        level: 'info',
-        filename: 'logs/process-manager-%DATE%.log',
-        datePattern: 'YYYY-MM-DD',
-        zippedArchive: false,
-        maxSize: '20m',
-        maxFiles: '14d',
-        handleRejections: true,
-        handleExceptions: true
-      }), new winston.transports.Console({
-        handleRejections: true,
-        handleExceptions: true
-      })],
-      format: winston.format.combine(
-        winston.format.splat(),
-        winston.format.timestamp(),
-        winston.format.label({ label: "Process Manager" }),
-        winston.format.printf(({ level, message, label, timestamp }) => `${timestamp} [${label}][${level}]: ${message}`)
-      ),
-      exitOnError: false
-    });
-
+    this.logger = Logger.createProcessLoggerManager();
     Logger.banner(this.logger);
-    this.galaxyManager = GalaxyManager.create();
+    this.galaxyManager = GalaxyManager.create(this.logger);
   }
 
   start (): void {

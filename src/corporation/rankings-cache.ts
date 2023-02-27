@@ -2,7 +2,7 @@ import Rankings from './rankings';
 import RankingsDao from '../corporation/rankings-dao';
 import Utils from '../utils/utils';
 
-export default class RankingCache {
+export default class RankingsCache {
   dao: RankingsDao;
 
   loaded: boolean = false;
@@ -25,6 +25,25 @@ export default class RankingCache {
         this.loadRankings(ranking);
       }
       this.loaded = true;
+    });
+  }
+
+  flush (): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.dirtyIds.size) {
+        return resolve();
+      }
+
+      Promise.all(Array.from(this.dirtyIds).map(id => {
+        return this.dao.set(this.byTypeId[id]);
+      }))
+        .then((rankings: Rankings[]) => {
+          for (const ranking of rankings) {
+            this.dirtyIds.delete(ranking.rankingTypeId);
+          }
+        })
+        .then(resolve)
+        .catch(reject);
     });
   }
 

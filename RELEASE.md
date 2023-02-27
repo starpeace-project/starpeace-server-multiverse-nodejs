@@ -1,5 +1,5 @@
 
-## v0.1.3 - in progress - updated 2023-02-05
+## v0.1.5 - in progress - updated 2023-02-26
 ### platform
 * [done] nodejs web-server with basic support [v0.1.0]
 * [done] simple in-memory and lightweight databases [v0.1.0]
@@ -16,18 +16,18 @@
 * [done] cashflow event API's (dummy) [v0.1.3]
 * [done] visa and tycoon position support [v0.1.3]
 * [done] rotating and robust logging [v0.1.3]
-* [pending] corporation and company cash structure
+* [in progress] corporation and company cash structure
 * [pending] visitor ID and API support
 * [pending] overlay and city zones API's
 * [pending] road API's
 
 ### assets
 * [done] configuration via starpeace-assets [v0.1.0]
-* [in progress] town boundaries
+* [done] town boundaries [v0.1.4]
 
 ### simulation
 * [done] basic simulation platform
-* [in progress] research progress
+* [done] research progress [v0.1.4]
 * [in progress] construction progress
 * [pending] initial setup town roads
 * [pending] rankings

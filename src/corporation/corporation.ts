@@ -2,6 +2,7 @@ import _ from 'lodash';
 import { DateTime } from 'luxon';
 
 import Company from '../company/company';
+import Utils from '../utils/utils';
 
 
 export default class Corporation {
@@ -18,8 +19,9 @@ export default class Corporation {
   companyIds: Set<string>;
 
   cash: number;
+  cashflow: number;
 
-  constructor (id: string, tycoonId: string, planetId: string, name: string, levelId: string, lastMailAt: DateTime | null, buildingCount: number, companyIds: Set<string>, cash: number) {
+  constructor (id: string, tycoonId: string, planetId: string, name: string, levelId: string, lastMailAt: DateTime | null, buildingCount: number, companyIds: Set<string>, cash: number, cashflow: number) {
     this.id = id;
     this.tycoonId = tycoonId;
     this.planetId = planetId;
@@ -29,6 +31,7 @@ export default class Corporation {
     this.buildingCount = buildingCount;
     this.companyIds = companyIds;
     this.cash = cash;
+    this.cashflow = cashflow;
   }
 
   withLastMailAt (time: DateTime): Corporation {
@@ -38,6 +41,10 @@ export default class Corporation {
 
   withCash (cash: number): Corporation {
     this.cash = cash;
+    return this;
+  }
+  withCashflow (cashflow: number): Corporation {
+    this.cashflow = cashflow;
     return this;
   }
 
@@ -51,7 +58,8 @@ export default class Corporation {
       lastMailAt: this.lastMailAt?.toISO(),
       buildingCount: this.buildingCount,
       companyIds: Array.from(this.companyIds),
-      cash: this.cash
+      cash: this.cash,
+      cashflow: this.cashflow
     };
   }
 
@@ -64,8 +72,24 @@ export default class Corporation {
       levelId: this.levelId,
       buildingCount: this.buildingCount,
       companies: _.map(companies, (company) => company.toJsonApi()),
-      cash: this.cash
+      cash: this.cash,
+      cashflow: this.cashflow
     };
+  }
+
+  static create (tycoonId: string, planetId: string, name: string, levelId: string, initialCash: number): Corporation {
+    return new Corporation(
+      Utils.uuid(),
+      tycoonId,
+      planetId,
+      name,
+      levelId,
+      null,
+      0,
+      new Set(),
+      initialCash,
+      0
+    );
   }
 
   static fromJson (json: any): Corporation {
@@ -78,7 +102,8 @@ export default class Corporation {
       json.lastMailAt ? DateTime.fromISO(json.lastMailAt) : null,
       parseInt(json.buildingCount ?? 0),
       new Set(Array.isArray(json.companyIds) ? json.companyIds : []),
-      json.cash
+      json.cash,
+      json.cashflow
     );
   }
 }

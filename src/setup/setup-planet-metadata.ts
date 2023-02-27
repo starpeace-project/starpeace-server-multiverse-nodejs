@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import fs from 'fs-extra';
+import path from 'path';
 
 import { BuildingDefinition } from '@starpeace/starpeace-assets-types';
 import { SetupConfigurations } from '../setup';
@@ -116,10 +117,11 @@ export default class SetupPlanetMetadata {
     ].concat(this.createIndustryRankings('PROFIT', 'profit', 'CURRENCY'))
   }
 
-  export (planetId: string) {
+  export (planetId: string, mapId: string) {
     fs.writeFileSync(`./galaxy/${planetId}/metadata.building.json`, JSON.stringify({
       definitions: _.map(_.values(this.configurations.building.definitions), (i) => i.toJson()),
-      simulationDefinitions: _.map(_.values(this.configurations.building.simulations), (i) => i.toJson())
+      simulationDefinitions: _.map(_.values(this.configurations.building.simulations), (i) => i.toJson()),
+      imageDefinitions: _.map(_.values(this.configurations.building.images), (i) => i.toJson())
     }))
 
     fs.writeFileSync(`./galaxy/${planetId}/metadata.core.json`, JSON.stringify({
@@ -136,5 +138,8 @@ export default class SetupPlanetMetadata {
     fs.writeFileSync(`./galaxy/${planetId}/metadata.invention.json`, JSON.stringify({
       inventions: this.configurations.inventions.map(i => i.toJson())
     }));
+
+    fs.copyFileSync(path.join(__dirname, `../../../node_modules/@starpeace/starpeace-assets/assets/maps/${mapId}.bmp`), `./galaxy/${planetId}/terrain.bmp`);
+    fs.copyFileSync(path.join(__dirname, `../../../node_modules/@starpeace/starpeace-assets/assets/maps/${mapId}.towns.bmp`), `./galaxy/${planetId}/towns.bmp`);
   }
 }

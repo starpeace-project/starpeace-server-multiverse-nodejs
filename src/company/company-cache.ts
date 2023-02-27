@@ -1,5 +1,5 @@
 import Company from '../company/company';
-import { CompanyDao } from '../company/company-store';
+import CompanyDao from './company-dao';
 import Utils from '../utils/utils';
 
 export default class CompanyCache {
@@ -28,6 +28,25 @@ export default class CompanyCache {
         this.loadCompany(company);
       }
       this.loaded = true;
+    });
+  }
+
+  flush (): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.dirtyIds.size) {
+        return resolve();
+      }
+
+      Promise.all(Array.from(this.dirtyIds).map(id => {
+        return this.dao.set(this.byId[id]);
+      }))
+        .then((companies: Company[]) => {
+          for (const company of companies) {
+            this.dirtyIds.delete(company.id);
+          }
+        })
+        .then(resolve)
+        .catch(reject);
     });
   }
 
@@ -60,4 +79,9 @@ export default class CompanyCache {
     return companyOrCompanys;
   }
 
+  updateCashflow (companyId: string, cashflow: number): Company | null {
+    const company: Company | null = this.forId(companyId)?.withCashflow(cashflow) ?? null;
+    if (company) this.dirtyIds.add(companyId);
+    return company;
+  }
 }

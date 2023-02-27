@@ -63,9 +63,6 @@ const logger = winston.createLogger({
 
 Logger.banner(logger);
 
-// bmp_path = path.join(__dirname, '../../node_modules/@starpeace/starpeace-assets/assets/maps/ancoeus.bmp')
-// bmp_buffer = fs.readFileSync(bmp_path)
-// console.log bmp_path
 
 const loadConfigurations = async (): Promise<{ configurations: SetupConfigurations }> => {
   const buildingsDir = path.join(__dirname, "../../node_modules/@starpeace/starpeace-assets/assets/buildings");

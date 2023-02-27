@@ -1,4 +1,5 @@
 import express from 'express';
+import winston from 'winston';
 
 import GalaxyManager, { PlanetMetadata } from '../galaxy-manager';
 import ModelEventClient from '../events/model-event-client';
@@ -15,11 +16,13 @@ import CorporationCache from '../../corporation/corporation-cache';
 
 
 export default class PlanetApi {
+  logger: winston.Logger;
   galaxyManager: GalaxyManager;
   modelEventClient: ModelEventClient;
   caches: ApiCaches;
 
-  constructor (galaxyManager: GalaxyManager, modelEventClient: ModelEventClient, caches: ApiCaches) {
+  constructor (logger: winston.Logger, galaxyManager: GalaxyManager, modelEventClient: ModelEventClient, caches: ApiCaches) {
+    this.logger = logger;
     this.galaxyManager = galaxyManager;
     this.modelEventClient = modelEventClient;
     this.caches = caches;
@@ -30,11 +33,11 @@ export default class PlanetApi {
       const isVisitor: boolean = req.body.identityType == 'visitor';
       const isTycoon: boolean = req.body.identityType == 'tycoon';
 
-      if (!isVisitor && !isTycoon) return res.status(400);
-      if (isVisitor && !this.galaxyManager.galaxyMetadata.visitorEnabled) return res.status(400);
-      if (isTycoon && !this.galaxyManager.galaxyMetadata.tycoonEnabled) return res.status(400);
-      if (isTycoon && !req.isAuthenticated()) return res.status(401);
-      if (!req.planet) return res.status(400);
+      if (!isVisitor && !isTycoon) return res.status(400).json({});
+      if (isVisitor && !this.galaxyManager.galaxyMetadata.visitorEnabled) return res.status(400).json({});
+      if (isTycoon && !this.galaxyManager.galaxyMetadata.tycoonEnabled) return res.status(400).json({});
+      if (isTycoon && !req.isAuthenticated()) return res.status(401).json({});
+      if (!req.planet) return res.status(400).json({});
 
       try {
         const tycoonId: string = isTycoon ? (<Tycoon> req.user).id : 'random-visitor';
@@ -47,12 +50,12 @@ export default class PlanetApi {
         const viewY: number = town?.mapY ?? 500;
 
         const visa: TycoonVisa = await this.modelEventClient.saveVisa(new TycoonVisa(Utils.uuid(), req.body.identityType, tycoonId, req.planet.id, corporation?.id, new Date().getTime() + VISA_IDLE_EXPIRATION_IN_MS, viewX, viewY));
-        if (!visa) return res.status(500);
+        if (!visa) return res.status(500).json({});
         return res.json(visa.toJson());
       }
       catch (err) {
-        console.error(err);
-        return res.status(500);
+        this.logger.error(err);
+        return res.status(500).json({});
       }
     };
   }
@@ -75,7 +78,7 @@ export default class PlanetApi {
         return next();
       }
       catch (err) {
-        console.error(err);
+        this.logger.error(err);
         return res.status(500);
       }
     };
@@ -94,7 +97,7 @@ export default class PlanetApi {
         return next();
       }
       catch (err) {
-        console.error(err);
+        this.logger.error(err);
         return res.status(500);
       }
     };
@@ -143,7 +146,7 @@ export default class PlanetApi {
         });
       }
       catch (err) {
-        console.error(err);
+        this.logger.error(err);
         return res.status(500);
       }
     };
@@ -177,7 +180,7 @@ export default class PlanetApi {
         }));
       }
       catch (err) {
-        console.error(err);
+        this.logger.error(err);
         return res.status(500);
       }
     };
@@ -195,7 +198,7 @@ export default class PlanetApi {
         return res.send(Buffer.from(data));
       }
       catch (err) {
-        console.error(err);
+        this.logger.error(err);
         return res.status(500);
       }
     };
@@ -210,7 +213,7 @@ export default class PlanetApi {
         return res.send(Buffer.from(data)); //new Buffer(data, 'binary'));
       }
       catch (err) {
-        console.error(err);
+        this.logger.error(err);
         return res.status(500);
       }
     };
@@ -238,7 +241,7 @@ export default class PlanetApi {
         }).filter(r => !!r));
       }
       catch (err) {
-        console.error(err);
+        this.logger.error(err);
         return res.status(500);
       }
     };
@@ -253,7 +256,7 @@ export default class PlanetApi {
         return res.json(towns.map(t => t.toJson()));
       }
       catch (err) {
-        console.error(err);
+        this.logger.error(err);
         return res.status(500);
       }
     };

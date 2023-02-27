@@ -1,8 +1,8 @@
 import _ from 'lodash';
 import fs from 'fs';
 
-import { CityZone, CompanySeal, IndustryCategory, IndustryType, Level, ResourceType, ResourceUnit } from '@starpeace/starpeace-assets-types';
-import Invention from '../company/invention';
+import { BuildingDefinition, BuildingImageDefinition, CityZone, CompanySeal, IndustryCategory, IndustryType, InventionDefinition, Level, ResourceType, ResourceUnit, SimulationDefinition, SimulationDefinitionParser } from '@starpeace/starpeace-assets-types';
+import winston from 'winston';
 
 
 export interface GalaxyMetadata {
@@ -26,6 +26,37 @@ export interface PlanetMetadata {
   corporationInitialCash: number;
 }
 
+export class BuildingConfigurations {
+  definitions: Array<BuildingDefinition>;
+  imageDefinitions: Array<BuildingImageDefinition>;
+  simulationDefinitions: Array<SimulationDefinition>;
+
+  definitionById: Record<string, BuildingDefinition>;
+  imageById: Record<string, BuildingImageDefinition>;
+  simulationById: Record<string, SimulationDefinition>;
+
+  constructor (definitions: Array<BuildingDefinition>, imageDefinitions: Array<BuildingImageDefinition>, simulationDefinitions: Array<SimulationDefinition>) {
+    this.definitions = definitions;
+    this.imageDefinitions = imageDefinitions;
+    this.simulationDefinitions = simulationDefinitions;
+
+    this.definitionById = Object.fromEntries((definitions || []).map(d => [d.id, d]));
+    this.imageById = Object.fromEntries((imageDefinitions || []).map(d => [d.id, d]));
+    this.simulationById = Object.fromEntries((simulationDefinitions || []).map(d => [d.id, d]));
+  }
+
+  imageForDefinitionId (definitionId: string): BuildingImageDefinition | null {
+    return this.definitionById[definitionId] ? this.imageById[this.definitionById[definitionId].imageId] : null;
+  }
+
+  toJson (): any {
+    return {
+      definitions: this.definitions.map(d => d.toJson()),
+      simulationDefinitions: this.simulationDefinitions.map(d => d.toJson()),
+    }
+  }
+}
+
 export class CoreConfigurations {
   cityZones: Array<CityZone>;
   industryCategories: Array<IndustryCategory>;
@@ -36,6 +67,8 @@ export class CoreConfigurations {
   resourceUnits: Array<ResourceUnit>;
   seals: Array<CompanySeal>;
 
+  sealsById: Record<string, CompanySeal>;
+
   constructor (cityZones: Array<CityZone>, industryCategories: Array<IndustryCategory>, industryTypes: Array<IndustryType>, levels: Array<Level>, rankingTypes: any, resourceTypes: Array<ResourceType>, resourceUnits: Array<ResourceUnit>, seals: Array<CompanySeal>) {
     this.cityZones = cityZones;
     this.industryCategories = industryCategories;
@@ -45,9 +78,10 @@ export class CoreConfigurations {
     this.resourceTypes = resourceTypes;
     this.resourceUnits = resourceUnits;
     this.seals = seals;
+
+    this.sealsById = Object.fromEntries((seals || []).map(s => [s.id, s]));
   }
 
-  get sealsById (): Record<string, CompanySeal> { return _.keyBy(this.seals, 'id'); }
   get lowestLevel (): Level | null { return _.first(_.orderBy(this.levels, ['level'], ['asc'])) ?? null; }
 
   toJson (): any {
@@ -65,17 +99,23 @@ export class CoreConfigurations {
 }
 
 export class InventionConfigurations {
-  inventions: Array<Invention>;
+  inventions: Array<InventionDefinition>;
+  definitionsById: Record<string, InventionDefinition>;
 
-  constructor (inventions: Array<Invention>) {
+  constructor (inventions: Array<InventionDefinition>) {
     this.inventions = inventions;
+    this.definitionsById = Object.fromEntries((inventions || []).map(i => [i.id, i]));
   }
 
-  get inventionsById () { return _.keyBy(this.inventions, 'id'); }
+  toJson (): any {
+    return {
+      inventions: this.inventions.map(i => i.toJson())
+    }
+  }
 }
 
 interface Configurations {
-  building: any;
+  building: BuildingConfigurations;
   core: CoreConfigurations;
   invention: InventionConfigurations;
 }
@@ -96,32 +136,44 @@ export default class GalaxyManager {
   get secret (): string { return this.galaxyMetadata.secretHash; }
 
   forPlanet (planetId: string): PlanetMetadata | null { return this.planetMetadataById[planetId]; }
+  forPlanetRequired (planetId: string): PlanetMetadata {
+    if (!this.planetMetadataById[planetId]) throw "Unknown planet id";
+    return this.planetMetadataById[planetId];
+  }
 
-  metadataBuildingForPlanet (planetId: string): any | null { return this.configurationsByPlanetId[planetId]?.building; }
+  metadataBuildingForPlanet (planetId: string): BuildingConfigurations | null { return this.configurationsByPlanetId[planetId]?.building; }
   metadataCoreForPlanet (planetId: string): CoreConfigurations | null { return this.configurationsByPlanetId[planetId]?.core; }
   metadataInventionForPlanet (planetId: string): InventionConfigurations | null { return this.configurationsByPlanetId[planetId]?.invention; }
 
+  static deserializeBuildingConfigurations (json: any): BuildingConfigurations {
+    return new BuildingConfigurations(
+      (json.definitions ?? []).map(BuildingDefinition.fromJson),
+      (json.imageDefinitions ?? []).map(BuildingImageDefinition.fromJson),
+      (json.simulationDefinitions ?? []).map(SimulationDefinitionParser.fromJson)
+    );
+  }
+
   static deserializeCoreConfigurations (json: any): CoreConfigurations {
     return new CoreConfigurations(
-      _.map(json.cityZones, CityZone.fromJson),
-      _.map(json.industryCategories, IndustryCategory.fromJson),
-      _.map(json.industryTypes, IndustryType.fromJson),
-      _.map(json.levels, Level.fromJson),
+      (json.cityZones ?? []).map(CityZone.fromJson),
+      (json.industryCategories ?? []).map(IndustryCategory.fromJson),
+      (json.industryTypes ?? []).map(IndustryType.fromJson),
+      (json.levels ?? []).map(Level.fromJson),
       json.rankingTypes,
-      _.map(json.resourceTypes, ResourceType.fromJson),
-      _.map(json.resourceUnits, ResourceUnit.fromJson),
-      _.map(json.seals, CompanySeal.fromJson)
+      (json.resourceTypes ?? []).map(ResourceType.fromJson),
+      (json.resourceUnits ?? []).map(ResourceUnit.fromJson),
+      (json.seals ?? []).map(CompanySeal.fromJson)
     );
   }
 
   static deserializeInventionConfigurations (json: any): InventionConfigurations {
     return new InventionConfigurations(
-      _.map(json.inventions, Invention.fromJson)
+      (json.inventions ?? []).map(InventionDefinition.fromJson)
     );
   }
 
 
-  static create (): GalaxyManager {
+  static create (logger: winston.Logger): GalaxyManager {
     const metadata: GalaxyMetadata = JSON.parse(fs.readFileSync('./galaxy/galaxy.config.json')?.toString());
 
     const planetMetadatas: Array<PlanetMetadata> = [];
@@ -135,21 +187,21 @@ export default class GalaxyManager {
         }
 
         if (!fs.existsSync(`./galaxy/${planetMetadata.id}/metadata.building.json`)) {
-          console.log("Unable to find planet metadata.${planetMetadata.id}.building.json; will omit planet (try re-running setup)");
+          logger.error("Unable to find planet metadata.${planetMetadata.id}.building.json; will omit planet (try re-running setup)");
           continue;
         }
         if (!fs.existsSync(`./galaxy/${planetMetadata.id}/metadata.invention.json`)) {
-          console.log("Unable to find planet metadata.${planetMetadata.id}.invention.json; will omit planet (try re-running setup)");
+          logger.error("Unable to find planet metadata.${planetMetadata.id}.invention.json; will omit planet (try re-running setup)");
           continue;
         }
         if (!fs.existsSync(`./galaxy/${planetMetadata.id}/metadata.core.json`)) {
-          console.log("Unable to find planet metadata.${planetMetadata.id}.core.json; will omit planet (try re-running setup)");
+          logger.error("Unable to find planet metadata.${planetMetadata.id}.core.json; will omit planet (try re-running setup)");
           continue;
         }
 
         planetMetadatas.push(planetMetadata);
         configurationsByPlanetId[planetMetadata.id] = {
-          building: JSON.parse(fs.readFileSync(`./galaxy/${planetMetadata.id}/metadata.building.json`).toString()),
+          building: GalaxyManager.deserializeBuildingConfigurations(JSON.parse(fs.readFileSync(`./galaxy/${planetMetadata.id}/metadata.building.json`).toString())),
           core: GalaxyManager.deserializeCoreConfigurations(JSON.parse(fs.readFileSync(`./galaxy/${planetMetadata.id}/metadata.core.json`).toString())),
           invention: GalaxyManager.deserializeInventionConfigurations(JSON.parse(fs.readFileSync(`./galaxy/${planetMetadata.id}/metadata.invention.json`).toString()))
         };

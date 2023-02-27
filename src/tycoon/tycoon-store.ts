@@ -2,14 +2,9 @@ import _ from 'lodash';
 import * as sqlite3 from 'sqlite3';
 
 import Tycoon from '../tycoon/tycoon';
+import TycoonDao from './tycoon-dao';
 
-export interface TycoonDao {
-  close (): Promise<void>;
-
-  all (): Promise<Tycoon[]>;
-}
-
-export default class TycoonStore {
+export default class TycoonStore implements TycoonDao {
   readOnly: boolean;
   db: sqlite3.Database;
 

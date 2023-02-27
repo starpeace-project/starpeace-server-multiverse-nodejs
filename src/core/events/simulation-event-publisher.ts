@@ -1,7 +1,7 @@
 import winston from 'winston';
 import { Publisher } from 'zeromq';
 
-import Planet from '../../planet/planet';
+import SimulationFrame from '../../engine/simulation-frame';
 
 const SUBSCRIBE_PORT = 19170;
 
@@ -31,12 +31,9 @@ export default class SimulationEventPublisher {
     this.logger.info('Stopped Simulation Event Publisher');
   }
 
-  async sendEvent (planetId: string, planet: Planet): Promise<void> {
+  async sendEvent (frame: SimulationFrame): Promise<void> {
     if (this.bound) {
-      await this.publisherSocket.send(['SIMULATION', JSON.stringify({
-        planetId: planetId,
-        planet: planet.toJson()
-      })]);
+      await this.publisherSocket.send(['SIMULATION', JSON.stringify(frame.toJson())]);
     }
   }
 }

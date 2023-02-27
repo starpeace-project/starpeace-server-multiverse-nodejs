@@ -1,5 +1,4 @@
 import _ from 'lodash';
-import EventEmitter from 'events';
 import PQueue from 'p-queue';
 import winston from 'winston';
 import { Request } from 'zeromq';
@@ -11,11 +10,11 @@ import Bookmark from '../../corporation/bookmark';
 import Building from '../../building/building';
 import Company from '../../company/company';
 import Corporation from '../../corporation/corporation';
-import Invention from '../../company/invention';
 import Mail from '../../corporation/mail';
 import Planet from '../../planet/planet';
 import Rankings from '../../corporation/rankings';
 import Town from '../../planet/town';
+import InventionSummary from '../../company/invention-summary';
 
 
 const SYNC_API_PORT = 19165;
@@ -24,7 +23,6 @@ const SYNC_API_PORT = 19165;
 export default class ModelEventClient {
   logger: winston.Logger;
   running: boolean = false;
-  events: EventEmitter;
 
   requestQueue: PQueue;
   requestSocket: Request;
@@ -32,7 +30,6 @@ export default class ModelEventClient {
   constructor (logger: winston.Logger) {
     this.logger = logger;
     this.running = false;
-    this.events = new EventEmitter();
 
     this.requestQueue = new PQueue({concurrency: 1});
     this.requestSocket = new Request();
@@ -170,33 +167,39 @@ export default class ModelEventClient {
       return (JSON.parse(result.toString()).buildings ?? []).map(Building.fromJson);
     });
   }
+  async constructBuilding (planetId: string, building: Building): Promise<Building> {
+    return await this.requestQueue.add(async () => {
+      await this.requestSocket.send(JSON.stringify({ type: 'BUILDING:CREATE', planetId: planetId, building: building.toJson() }));
+      const [result] = await this.requestSocket.receive();
+      const jsonResult = JSON.parse(result.toString());
+      if (jsonResult.error) {
+        throw jsonResult.error;
+      }
+      else {
+        return Building.fromJson(jsonResult.building);
+      }
+    });
+  }
 
-  async listCompanyInventions (planetId: string, companyId: string): Promise<Invention[]> {
+  async getCompanyInventionSummary (planetId: string, companyId: string): Promise<InventionSummary> {
     return await this.requestQueue.add(async () => {
-      await this.requestSocket.send(JSON.stringify({ type: 'RESEARCH:LIST', planetId: planetId, companyId: companyId }));
+      await this.requestSocket.send(JSON.stringify({ type: 'RESEARCH:SUMMARY', planetId: planetId, companyId: companyId }));
       const [result] = await this.requestSocket.receive();
-      return (JSON.parse(result.toString()).inventions ?? []).map(Invention.fromJson);
+      return InventionSummary.fromJson(JSON.parse(result.toString()).summary);
     });
   }
-  async findInvention (planetId: string, companyId: string, inventionId: string): Promise<Invention> {
+  async startResearch (planetId: string, companyId: string, inventionId: string): Promise<InventionSummary> {
     return await this.requestQueue.add(async () => {
-      await this.requestSocket.send(JSON.stringify({ type: 'RESEARCH:GET', planetId: planetId, companyId: companyId, inventionId: inventionId }));
+      await this.requestSocket.send(JSON.stringify({ type: 'RESEARCH:START', planetId: planetId, companyId: companyId, inventionId: inventionId }));
       const [result] = await this.requestSocket.receive();
-      return Invention.fromJson(JSON.parse(result.toString()).invention);
+      return InventionSummary.fromJson(JSON.parse(result.toString()).summary);
     });
   }
-  async startResearch (planetId: string, invention: Invention): Promise<Invention> {
+  async cancelResearch (planetId: string, companyId: string, inventionId: string): Promise<InventionSummary> {
     return await this.requestQueue.add(async () => {
-      await this.requestSocket.send(JSON.stringify({ type: 'RESEARCH:START', planetId: planetId, invention: invention.toJson() }));
+      await this.requestSocket.send(JSON.stringify({ type: 'RESEARCH:CANCEL', planetId: planetId, companyId: companyId, inventionId: inventionId }));
       const [result] = await this.requestSocket.receive();
-      return Invention.fromJson(JSON.parse(result.toString()).invention);
-    });
-  }
-  async sellResearch (planetId: string, companyId: string, inventionId: string): Promise<string> {
-    return await this.requestQueue.add(async () => {
-      await this.requestSocket.send(JSON.stringify({ type: 'RESEARCH:SELL', planetId: planetId, companyId: companyId, inventionId: inventionId }));
-      const [result] = await this.requestSocket.receive();
-      return JSON.parse(result.toString()).inventionId;
+      return InventionSummary.fromJson(JSON.parse(result.toString()).summary);
     });
   }
 
