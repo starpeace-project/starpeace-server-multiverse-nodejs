@@ -2,7 +2,6 @@
 # starpeace-server-multiverse-nodejs
 
 [![GitHub release](https://img.shields.io/github/release/starpeace-project/starpeace-server-multiverse-nodejs.svg)](https://github.com/starpeace-project/starpeace-server-multiverse-nodejs/releases/)
-[![Build Status](https://travis-ci.org/starpeace-project/starpeace-server-multiverse-nodejs.svg)](https://travis-ci.org/starpeace-project/starpeace-server-multiverse-nodejs)
 [![GitHub license](https://img.shields.io/github/license/starpeace-project/starpeace-server-multiverse-nodejs.svg)](https://github.com/starpeace-project/starpeace-server-multiverse-nodejs/blob/master/LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/starpeace-project/starpeace-server-multiverse-nodejs.svg)](https://github.com/starpeace-project/starpeace-server-multiverse-nodejs/issues)
 [![GitHub stars](https://img.shields.io/github/stars/starpeace-project/starpeace-server-multiverse-nodejs.svg)](https://github.com/starpeace-project/starpeace-server-multiverse-nodejs/stargazers)

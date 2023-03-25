@@ -27,6 +27,22 @@ export default class CompanyApi {
     this.caches = caches;
   }
 
+  getCompany (): (req: express.Request, res: express.Response) => any {
+    return async (req: express.Request, res: express.Response) => {
+      if (!req.planet || !req.params.companyId) return res.status(400);
+
+      try {
+        const company: Company | null = this.caches.company.withPlanet(req.planet).forId(req.params.companyId);
+        if (!company) return res.status(404);
+        return res.json(company.toJsonApi());
+      }
+      catch (err) {
+        this.logger.error(err);
+        return res.status(500).json({});
+      }
+    };
+  }
+
   createCompany (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
       if (!req.planet || !req.visa || !req.visa.corporationId) return res.status(400).json({});

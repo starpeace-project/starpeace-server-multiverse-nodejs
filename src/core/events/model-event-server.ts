@@ -193,8 +193,8 @@ export default class ModelEventServer {
       }
       else if (request.type === 'CORPORATION:CREATE') {
         const corporation: Corporation = <Corporation> this.caches.corporation.withPlanetId(request.planetId).update(Corporation.fromJson(request.corporation));
-        await this.replySocket.send(JSON.stringify({ corporation: corporation.toJson() }))
-        await this.publisherSocket.send(['CORPORATION:UPDATE', JSON.stringify({ planetId: corporation.planetId, corporation: corporation.toJson() })])
+        await this.replySocket.send(JSON.stringify({ corporation: corporation.toJson() }));
+        await this.publisherSocket.send(['CORPORATION:UPDATE', JSON.stringify({ planetId: corporation.planetId, corporation: corporation.toJson() })]);
       }
 
       else if (request.type === 'COMPANY:LIST') {

@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import * as sqlite3 from 'sqlite3';
 
 import Bookmark from '../corporation/bookmark';
@@ -28,15 +27,6 @@ export default class BookmarkStore {
     });
   }
 
-  all (): Promise<Bookmark[]> {
-    return new Promise((resolve: Function, reject: Function) => {
-      this.db.all("SELECT content FROM bookmarks", [], (err: Error, rows: Array<any>) => {
-        if (err) return reject(err);
-        resolve(_.map(_.filter(rows, (row: any) => row?.content != null), (row: any) => Bookmark.fromJson(JSON.parse(row.content))));
-      });
-    });
-  }
-
   get (id: string): Promise<Bookmark | null> {
     return new Promise((resolve: Function, reject: Function) => {
       return this.db.get("SELECT content FROM bookmarks WHERE id = ?", [id], (err: Error, row: any) => {
@@ -50,7 +40,7 @@ export default class BookmarkStore {
     return new Promise((resolve: Function, reject: Function) => {
       this.db.all("SELECT content FROM bookmarks WHERE corporationId = ?", [corporationId], (err: Error, rows: Array<any>) => {
         if (err) return reject(err);
-        resolve(_.map(_.filter(rows, (row: any) => row?.id), (row: any) => Bookmark.fromJson(row)));
+        resolve(rows.filter((row: any) => row?.content).map((row: any) => Bookmark.fromJson(JSON.parse(row.content))));
       });
     });
   }

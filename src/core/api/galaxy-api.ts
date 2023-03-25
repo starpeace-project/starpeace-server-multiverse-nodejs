@@ -101,7 +101,7 @@ export default class GalaxyApi {
   create (): (req: express.Request, res: express.Response, next: any) => any {
     return async (req: express.Request, res: express.Response, next: any): Promise<express.Response> => {
       if (!req.body.username?.length || !req.body.password?.length) return res.status(400);
-      return passport.authenticate('register', { session: false }, async (error, user, info) => {
+      return passport.authenticate('register', { session: false }, async (error: any, user: Tycoon | undefined, info: any) => {
         if (error) {
           if (error === 'INVALID_NAME' || error === 'USERNAME_CONFLICT') {
             return res.status(400).json({ code: error });
@@ -128,7 +128,7 @@ export default class GalaxyApi {
         }
       }
       else {
-        return passport.authenticate('login', { session: false }, async (err, user) => {
+        return passport.authenticate('login', { session: false }, async (err: any, user: Tycoon | undefined) => {
           if (err) {
             this.logger.error(err);
             return res.status(500).json({});

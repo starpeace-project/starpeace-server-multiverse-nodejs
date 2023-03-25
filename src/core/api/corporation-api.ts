@@ -45,7 +45,7 @@ export default class CorporationApi {
       }
       catch (err) {
         this.logger.error(err);
-        return res.status(500);
+        return res.status(500).json({});
       }
     };
   }
@@ -66,7 +66,7 @@ export default class CorporationApi {
       }
       catch (err) {
         this.logger.error(err);
-        return res.status(500);
+        return res.status(500).json({});
       }
     };
   }
@@ -96,7 +96,7 @@ export default class CorporationApi {
       }
       catch (err) {
         this.logger.error(err);
-        return res.status(500);
+        return res.status(500).json({});
       }
     };
   }
@@ -149,7 +149,7 @@ export default class CorporationApi {
       }
       catch (err) {
         this.logger.error(err);
-        return res.status(500);
+        return res.status(500).json({});
       }
     };
   }
@@ -231,7 +231,7 @@ export default class CorporationApi {
       }
       catch (err) {
         this.logger.error(err);
-        return res.status(500);
+        return res.status(500).json({});
       }
     };
   }

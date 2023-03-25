@@ -62,21 +62,21 @@ export default class ModelEventClient {
       await this.requestSocket.send(JSON.stringify({ type: 'TYCOON:LIST' }));
       const [result] = await this.requestSocket.receive();
       return _.map(JSON.parse(result.toString()).tycoons, Tycoon.fromJson);
-    });
+    }, { throwOnTimeout: true });
   }
   async createTycoon (tycoon: Tycoon): Promise<Tycoon> {
     return await this.requestQueue.add(async () => {
       await this.requestSocket.send(JSON.stringify({ type: 'TYCOON:CREATE', tycoon: tycoon.toJson() }));
       const [result] = await this.requestSocket.receive();
       return Tycoon.fromJson(JSON.parse(result.toString()).tycoon);
-    });
+    }, { throwOnTimeout: true });
   }
   async tycoon (tycoonId: string): Promise<Tycoon> {
     return await this.requestQueue.add(async () => {
       await this.requestSocket.send(JSON.stringify({ type: 'TYCOON:GET', tycoonId: tycoonId }));
       const [result] = await this.requestSocket.receive();
       return Tycoon.fromJson(JSON.parse(result.toString()).tycoon);
-    });
+    }, { throwOnTimeout: true });
   }
 
   async issueToken (tycoon: Tycoon): Promise<string> {
@@ -84,14 +84,14 @@ export default class ModelEventClient {
       await this.requestSocket.send(JSON.stringify({ type: 'TOKEN:ISSUE', tycoonId: tycoon.id }));
       const [result] = await this.requestSocket.receive();
       return JSON.parse(result.toString()).token;
-    });
+    }, { throwOnTimeout: true });
   }
   async loginToken (token: string): Promise<Tycoon> {
     return await this.requestQueue.add(async () => {
       await this.requestSocket.send(JSON.stringify({ type: 'TOKEN:LOGIN', tokenId: token }));
       const [result] = await this.requestSocket.receive();
       return Tycoon.fromJson(JSON.parse(result.toString()).tycoon);
-    });
+    }, { throwOnTimeout: true });
   }
 
   async allTycoonVisas (): Promise<TycoonVisa[]> {
@@ -106,13 +106,13 @@ export default class ModelEventClient {
       await this.requestSocket.send(JSON.stringify({ type: 'VISA:SAVE', visa: visa.toJson() }));
       const [result] = await this.requestSocket.receive();
       return TycoonVisa.fromJson(JSON.parse(result.toString()).visa);
-    });
+    }, { throwOnTimeout: true });
   }
   async destroyVisa (visaId: string): Promise<void> {
     return await this.requestQueue.add(async () => {
       await this.requestSocket.send(JSON.stringify({ type: 'VISA:DESTROY', visaId: visaId }));
       await this.requestSocket.receive();
-    });
+    }, { throwOnTimeout: true });
   }
 
   async allCorporations (planetId: string): Promise<Corporation[]> {
@@ -127,7 +127,7 @@ export default class ModelEventClient {
       await this.requestSocket.send(JSON.stringify({ type: 'CORPORATION:CREATE', planetId: planetId, corporation: corporation.toJson() }));
       const [result] = await this.requestSocket.receive();
       return Corporation.fromJson(JSON.parse(result.toString()).corporation);
-    });
+    }, { throwOnTimeout: true });
   }
 
   async allCompanies (planetId: string): Promise<Company[]> {
@@ -142,7 +142,7 @@ export default class ModelEventClient {
       await this.requestSocket.send(JSON.stringify({ type: 'COMPANY:CREATE', planetId: planetId, company: company.toJson() }));
       const [result] = await this.requestSocket.receive();
       return Company.fromJson(JSON.parse(result.toString()).company);
-    });
+    }, { throwOnTimeout: true });
   }
 
   async bookmarksForCorporation (planetId: string, corporationId: string): Promise<Bookmark[]> {
@@ -178,7 +178,7 @@ export default class ModelEventClient {
       else {
         return Building.fromJson(jsonResult.building);
       }
-    });
+    }, { throwOnTimeout: true });
   }
 
   async getCompanyInventionSummary (planetId: string, companyId: string): Promise<InventionSummary> {
@@ -186,21 +186,21 @@ export default class ModelEventClient {
       await this.requestSocket.send(JSON.stringify({ type: 'RESEARCH:SUMMARY', planetId: planetId, companyId: companyId }));
       const [result] = await this.requestSocket.receive();
       return InventionSummary.fromJson(JSON.parse(result.toString()).summary);
-    });
+    }, { throwOnTimeout: true });
   }
   async startResearch (planetId: string, companyId: string, inventionId: string): Promise<InventionSummary> {
     return await this.requestQueue.add(async () => {
       await this.requestSocket.send(JSON.stringify({ type: 'RESEARCH:START', planetId: planetId, companyId: companyId, inventionId: inventionId }));
       const [result] = await this.requestSocket.receive();
       return InventionSummary.fromJson(JSON.parse(result.toString()).summary);
-    });
+    }, { throwOnTimeout: true });
   }
   async cancelResearch (planetId: string, companyId: string, inventionId: string): Promise<InventionSummary> {
     return await this.requestQueue.add(async () => {
       await this.requestSocket.send(JSON.stringify({ type: 'RESEARCH:CANCEL', planetId: planetId, companyId: companyId, inventionId: inventionId }));
       const [result] = await this.requestSocket.receive();
       return InventionSummary.fromJson(JSON.parse(result.toString()).summary);
-    });
+    }, { throwOnTimeout: true });
   }
 
   async mailForCorporation (planetId: string, corporationId: string): Promise<Mail[]> {
@@ -219,7 +219,7 @@ export default class ModelEventClient {
         throw Error(json.error ?? 'Unable to send mail');
       }
       return Mail.fromJson(json.mail);
-    });
+    }, { throwOnTimeout: true });
   }
   async markReadMail (planetId: string, mailId: string): Promise<string> {
     return await this.requestQueue.add(async () => {
@@ -241,7 +241,7 @@ export default class ModelEventClient {
       await this.requestSocket.send(JSON.stringify({ type: 'PLANET:GET', planetId: planetId }));
       const [result] = await this.requestSocket.receive();
       return Planet.fromJson(JSON.parse(result.toString()).planet);
-    });
+    }, { throwOnTimeout: true });
   }
 
   async allTowns (planetId: string): Promise<Town[]> {

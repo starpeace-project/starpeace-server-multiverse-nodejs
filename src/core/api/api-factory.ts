@@ -190,6 +190,7 @@ export default class ApiFactory {
     app.delete('/corporations/:corporationId/mail/:mailId', authenticate, verifyPlanet, verifyTycoon, corporationApi.deleteMail());
 
     app.post('/companies', authenticate, verifyPlanet, verifyTycoon, companyApi.createCompany());
+    app.get('/companies/:companyId', authenticate, verifyPlanet, verifyVisa, companyApi.getCompany());
     app.get('/companies/:companyId/buildings', authenticate, verifyPlanet, verifyVisa, buildingApi.getCompanyBuildings());
     app.get('/companies/:companyId/inventions', authenticate, verifyPlanet, verifyTycoon, companyApi.getInventions());
     app.put('/companies/:companyId/inventions/:inventionId', authenticate, verifyPlanet, verifyTycoon, companyApi.researchInvention());
