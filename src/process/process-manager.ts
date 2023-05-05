@@ -43,7 +43,7 @@ export default class ProcessManager {
     this.initializeModelServer();
     this.initializeHttpWorkers(workerCount);
 
-    this.logger.info(`Total CPU: ${cpuCount}`);
+    this.logger.info(`Total Cores: ${cpuCount}`);
     this.logger.info("Model Server: 1");
     this.logger.info(`Simulation: ${planetCount}`);
     this.logger.info(`HTTP Worker: ${workerCount}`);

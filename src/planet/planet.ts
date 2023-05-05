@@ -14,7 +14,7 @@ export default class Planet {
   }
 
   get planetTime (): string {
-    return this.time.toISO({ suppressSeconds: true, suppressMilliseconds: true, includeOffset: false });
+    return <string> this.time.toISO({ suppressSeconds: true, suppressMilliseconds: true, includeOffset: false });
   }
 
   get season (): string {

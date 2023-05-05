@@ -6,10 +6,10 @@ import GalaxyManager from '../galaxy-manager';
 import ModelEventClient from '../events/model-event-client';
 import { ApiCaches } from './api-factory';
 
-import Company from '../../company/company';
 import Corporation from '../../corporation/corporation';
 import Tycoon from '../../tycoon/tycoon';
 import CorporationCache from '../../corporation/corporation-cache';
+import CorporationIdentifier from '../../corporation/corporation-identifier';
 
 export default class TycoonApi {
   logger: winston.Logger;
@@ -32,17 +32,34 @@ export default class TycoonApi {
         const tycoon: Tycoon | null = this.caches.tycoon.forId(req.params.tycoonId);
         if (!tycoon) return res.status(404);
 
-        // TODO: single planet?
-        const corporationsJson = this.caches.corporation.entries().map(([planetId, cache]) => {
-          const corporation: Corporation | null = cache.forTycoonId(tycoon.id);
-          return corporation?.toJsonApi(Array.from(corporation?.companyIds ?? []).map(id => this.caches.company.withPlanetId(planetId).forId(id)).filter(c => !!c) as Company[]);
-        }).filter(c => !!c).flat(1);
-
         return res.json({
           id: tycoon.id,
           username: tycoon.username,
-          name: tycoon.name,
-          corporations: corporationsJson
+          name: tycoon.name
+        });
+      }
+      catch (err) {
+        this.logger.error(err);
+        return res.status(500);
+      }
+    };
+  }
+
+  getTycoonCorporations (): (req: express.Request, res: express.Response) => any {
+    return async (req: express.Request, res: express.Response) => {
+      if (!req.params.tycoonId) return res.status(400);
+
+      try {
+        const tycoon: Tycoon | null = this.caches.tycoon.forId(req.params.tycoonId);
+        if (!tycoon) return res.status(404);
+
+        const identifiersJson = this.caches.corporation.entries().map(([planetId, cache]) => {
+          const corporation: Corporation | null = cache.forTycoonId(tycoon.id);
+          return corporation ? new CorporationIdentifier(corporation.id, corporation.name, planetId) : null;
+        }).filter(c => !!c).map(c => c?.toJson());
+
+        return res.json({
+          identifiers: identifiersJson
         });
       }
       catch (err) {

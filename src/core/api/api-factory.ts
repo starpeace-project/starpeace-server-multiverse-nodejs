@@ -170,6 +170,9 @@ export default class ApiFactory {
     // planet API's (simulation server)
     app.post('/visa', authenticate, verifyPlanet, planetApi.registerVisa());
 
+    app.get('/tycoons/:tycoonId', authenticate, verifyPlanet, verifyVisa, tycoonApi.getTycoon());
+    app.get('/tycoons/:tycoonId/corporation-ids', authenticate, tycoonApi.getTycoonCorporations());
+
     app.get('/metadata/buildings', authenticate, verifyPlanet, verifyVisa, metadataApi.getBuildings());
     app.get('/metadata/core', authenticate, verifyPlanet, verifyVisa, metadataApi.getCore());
     app.get('/metadata/inventions', authenticate, verifyPlanet, verifyVisa, metadataApi.getInventions());
@@ -181,6 +184,11 @@ export default class ApiFactory {
     app.get('/corporations', authenticate, verifyPlanet, verifyVisa, corporationApi.getPlanetCorporations());
     app.post('/corporations', authenticate, verifyPlanet, verifyTycoon, corporationApi.createCorporation());
     app.get('/corporations/:corporationId', authenticate, verifyPlanet, verifyVisa, corporationApi.getCorporation());
+    app.get('/corporations/:corporationId/rankings', authenticate, verifyPlanet, verifyVisa, corporationApi.getRankings());
+    app.get('/corporations/:corporationId/prestige-history', authenticate, verifyPlanet, verifyVisa, corporationApi.getPrestigeHistory());
+    app.get('/corporations/:corporationId/strategies', authenticate, verifyPlanet, verifyTycoon, corporationApi.getStrategies());
+    app.get('/corporations/:corporationId/loan-payments', authenticate, verifyPlanet, verifyTycoon, corporationApi.getLoanPayments());
+    app.get('/corporations/:corporationId/loan-offers', authenticate, verifyPlanet, verifyTycoon, corporationApi.getLoanOffers());
     app.get('/corporations/:corporationId/bookmarks', authenticate, verifyPlanet, verifyTycoon, corporationApi.getBookmarks());
     app.post('/corporations/:corporationId/bookmarks', authenticate, verifyPlanet, verifyTycoon, corporationApi.createBookmark());
     app.patch('/corporations/:corporationId/bookmarks', authenticate, verifyPlanet, verifyTycoon, corporationApi.updateBookmarks());
@@ -210,7 +218,7 @@ export default class ApiFactory {
     app.get('/towns/:townId/companies', authenticate, verifyPlanet, verifyVisa, companyApi.getTownCompanies());
     app.get('/towns/:townId/details', authenticate, verifyPlanet, verifyVisa, planetApi.getTownDetails());
 
-    app.get('/tycoons/:tycoonId', authenticate, verifyPlanet, verifyVisa, tycoonApi.getTycoon());
+
   }
 
 }

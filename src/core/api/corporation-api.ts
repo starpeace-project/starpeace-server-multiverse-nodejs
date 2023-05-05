@@ -17,6 +17,12 @@ import Tycoon from '../../tycoon/tycoon';
 
 import Utils from '../../utils/utils';
 import CompanyCache from '../../company/company-cache';
+import PlanetCache from '../../planet/planet-cache';
+import CorporationRanking from '../../corporation/corporation-ranking';
+import CorporationPrestigeHistory from '../../corporation/corporation-prestige-history';
+import CorporationStrategy from '../../corporation/corporation-strategy';
+import CorporationLoanOffer from '../../corporation/corporation-loan-offer';
+import CorporationLoanPayment from '../../corporation/corporation-loan-payment';
 
 export default class CorporationApi {
   logger: winston.Logger;
@@ -121,7 +127,8 @@ export default class CorporationApi {
           return res.status(500).json({});
         }
 
-        const corporation: Corporation = await this.modelEventClient.createCorporation(req.planet.id, Corporation.create(tycoonId, req.planet.id, name, coreMetadata.lowestLevel.id, planetMetadata.corporationInitialCash));
+        const planetCache: PlanetCache = this.caches.planet.withPlanet(req.planet);
+        const corporation: Corporation = await this.modelEventClient.createCorporation(req.planet.id, Corporation.create(tycoonId, req.planet.id, name, coreMetadata.lowestLevel.id,  planetCache.planet.time, planetMetadata.corporationInitialCash));
         await this.modelEventClient.saveVisa(req.visa.withCorporationId(corporation.id));
 
         return res.json(corporation.toJsonApi([]));
@@ -133,6 +140,101 @@ export default class CorporationApi {
     };
   }
 
+
+  getRankings (): (req: express.Request, res: express.Response) => any {
+    return async (req: express.Request, res: express.Response) => {
+      if (!req.planet || !req.params.corporationId) return res.status(400);
+
+      try {
+        const corporation: Corporation | null = this.caches.corporation.withPlanet(req.planet).forId(req.params.corporationId);
+        if (!corporation) return res.status(404);
+
+        const rankings: CorporationRanking[] = [];
+        // FIXME: TODO: hookup logic
+        return res.json(rankings.map(r => r.toJson()));
+      }
+      catch (err) {
+        this.logger.error(err);
+        return res.status(500).json({});
+      }
+    };
+  }
+
+  getPrestigeHistory (): (req: express.Request, res: express.Response) => any {
+    return async (req: express.Request, res: express.Response) => {
+      if (!req.planet || !req.params.corporationId) return res.status(400);
+
+      try {
+        const corporation: Corporation | null = this.caches.corporation.withPlanet(req.planet).forId(req.params.corporationId);
+        if (!corporation) return res.status(404);
+
+        const history: CorporationPrestigeHistory[] = [];
+        // FIXME: TODO: hookup logic
+        return res.json(history.map(h => h.toJson()));
+      }
+      catch (err) {
+        this.logger.error(err);
+        return res.status(500).json({});
+      }
+    };
+  }
+
+  getStrategies (): (req: express.Request, res: express.Response) => any {
+    return async (req: express.Request, res: express.Response) => {
+      if (!req.planet || !req.params.corporationId) return res.status(400);
+
+      try {
+        const corporation: Corporation | null = this.caches.corporation.withPlanet(req.planet).forId(req.params.corporationId);
+        if (!corporation) return res.status(404);
+
+        const strategies: CorporationStrategy[] = [];
+        // FIXME: TODO: hookup logic
+        return res.json(strategies.map(s => s.toJson()));
+      }
+      catch (err) {
+        this.logger.error(err);
+        return res.status(500).json({});
+      }
+    };
+  }
+
+  getLoanPayments (): (req: express.Request, res: express.Response) => any {
+    return async (req: express.Request, res: express.Response) => {
+      if (!req.planet || !req.params.corporationId) return res.status(400);
+
+      try {
+        const corporation: Corporation | null = this.caches.corporation.withPlanet(req.planet).forId(req.params.corporationId);
+        if (!corporation) return res.status(404);
+
+        const payments: CorporationLoanPayment[] = [];
+        // FIXME: TODO: hookup logic
+        return res.json(payments.map(p => p.toJson()));
+      }
+      catch (err) {
+        this.logger.error(err);
+        return res.status(500).json({});
+      }
+    };
+  }
+
+  getLoanOffers (): (req: express.Request, res: express.Response) => any {
+    return async (req: express.Request, res: express.Response) => {
+      if (!req.planet || !req.params.corporationId) return res.status(400);
+
+      try {
+        const corporation: Corporation | null = this.caches.corporation.withPlanet(req.planet).forId(req.params.corporationId);
+        if (!corporation) return res.status(404);
+
+        const offers: CorporationLoanOffer[] = [];
+        // FIXME: TODO: hookup logic
+        return res.json(offers.map(o => o.toJson()));
+      }
+      catch (err) {
+        this.logger.error(err);
+        return res.status(500).json({});
+      }
+    };
+  }
 
   getBookmarks (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {

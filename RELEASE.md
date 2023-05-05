@@ -1,5 +1,5 @@
 
-## v0.1.5 - in progress - updated 2023-02-26
+## v0.1.5 - in progress - updated 2023-05-04
 ### platform
 * [done] nodejs web-server with basic support [v0.1.0]
 * [done] simple in-memory and lightweight databases [v0.1.0]
@@ -17,6 +17,10 @@
 * [done] visa and tycoon position support [v0.1.3]
 * [done] rotating and robust logging [v0.1.3]
 * [in progress] corporation and company cash structure
+* [in progress] corporation and company financials API's
+* [in progress] corporation bank account API's
+* [in progress] corporation strategy API's
+* [pending] company suppliers API's
 * [pending] visitor ID and API support
 * [pending] overlay and city zones API's
 * [pending] road API's
