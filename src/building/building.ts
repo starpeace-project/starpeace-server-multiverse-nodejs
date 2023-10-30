@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import Utils from '../utils/utils';
+import { DateTime } from 'luxon';
 
 // import BuildingDefinition from './building-definition';
 // import SimulationDefinition from './simulation/simulation-definition';
@@ -18,8 +18,8 @@ export default class Building {
   mapY: number;
   stage: number;
 
-  // definition: BuildingDefinition;
-  // simulationDefinition: SimulationDefinition;
+  constructionStartedAt: DateTime;
+  constructionFinishedAt: DateTime | undefined;
 
   // pullInputs: Array;
   // pullOutputs: Array;
@@ -27,7 +27,7 @@ export default class Building {
   // pushOutputs: Array;
 
 
-  constructor (id: string, tycoonId: string, corporationId: string, companyId: string, definitionId: string, townId: string, name: string | null, mapX: number, mapY: number, stage: number) {
+  constructor (id: string, tycoonId: string, corporationId: string, companyId: string, definitionId: string, townId: string, name: string | null, mapX: number, mapY: number, stage: number, constructionStartedAt: DateTime, constructionFinishedAt: DateTime | undefined) {
     this.id = id;
     this.tycoonId = tycoonId;
     this.corporationId = corporationId;
@@ -38,6 +38,8 @@ export default class Building {
     this.mapX = mapX;
     this.mapY = mapY;
     this.stage = stage;
+    this.constructionStartedAt = constructionStartedAt;
+    this.constructionFinishedAt = constructionFinishedAt;
   }
 
   get chunkX (): number {
@@ -100,7 +102,9 @@ export default class Building {
       name: this.name,
       mapX: this.mapX,
       mapY: this.mapY,
-      stage: this.stage
+      stage: this.stage,
+      constructionStartedAt: this.constructionStartedAt.toISO(),
+      constructionFinishedAt: this.constructionFinishedAt?.toISO()
     };
   }
 
@@ -115,22 +119,10 @@ export default class Building {
       json.name ?? null,
       json.mapX,
       json.mapY,
-      json.stage ?? 0
+      json.stage ?? 0,
+      DateTime.fromISO(json.constructionStartedAt),
+      json.constructionFinishedAt ? DateTime.fromISO(json.constructionFinishedAt) : undefined,
     );
   }
 
-  static create (tycoonId: string, corporationId: string, companyId: string, definitionId: string, townId: string, name: string | null, mapX: number, mapY: number): Building {
-    return new Building(
-      Utils.uuid(),
-      tycoonId,
-      corporationId,
-      companyId,
-      definitionId,
-      townId,
-      name ?? null,
-      mapX,
-      mapY,
-      -1
-    );
-  }
 }

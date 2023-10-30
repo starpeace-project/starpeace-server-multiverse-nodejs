@@ -128,9 +128,13 @@ export default class PlanetApi {
       if (!req.planet || !req.params.townId) return res.status(400);
 
       try {
+        console.log('get town details', 1, req.params.townId);
+        console.log(this.caches.town.withPlanet(req.planet).byId);
         const town: Town | null = this.caches.town.withPlanet(req.planet).forId(req.params.townId);
+        console.log('get town details', 2, town);
         if (!town) return res.status(404);
 
+        console.log('get town details', 3);
         // FIXME: TODO: hookup details
         return res.json({
           id: req.params.townId,

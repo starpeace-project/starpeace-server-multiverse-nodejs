@@ -15,6 +15,7 @@ import Bookmark from '../../corporation/bookmark';
 import BookmarkStore from '../../corporation/bookmark-store';
 import Building from '../../building/building';
 import BuildingCache from '../../building/building-cache';
+import BuildingStore from '../../building/building-store';
 import Corporation from '../../corporation/corporation';
 import CorporationCache from '../../corporation/corporation-cache';
 import Company from '../../company/company';
@@ -31,6 +32,8 @@ import TownCache from '../../planet/town-cache';
 
 import CacheByPlanet from '../../planet/cache-by-planet';
 import Utils from '../../utils/utils';
+import BuildingLabor from '../../building/building-labor';
+import BuildingProduct from '../../building/building-product';
 
 const SYNC_API_PORT = 19165;
 const ASYNC_SERVER_TO_CLIENT_PORT = 19166;
@@ -47,6 +50,7 @@ export interface ModelEventServerStores {
   tycoonToken: TycoonTokenStore;
 
   bookmarkByPlanet: Record<string, BookmarkStore>;
+  buildingByPlanet: Record<string, BuildingStore>;
   mailByPlanet: Record<string, MailStore>;
 }
 
@@ -247,7 +251,19 @@ export default class ModelEventServer {
         await this.replySocket.send(JSON.stringify({ buildings: buildings.map(c => c.toJson()) }));
       }
       else if (request.type === 'BUILDING:CREATE') {
-        const building: Building = Building.fromJson(request.building);
+        const building: Building = new Building(Utils.uuid(),
+          request.tycoonId,
+          request.corporationId,
+          request.companyId,
+          request.definitionId,
+          request.townId,
+          request.name ?? null,
+          request.mapX,
+          request.mapY,
+          -1,
+          this.caches.planet.withPlanetId(request.planetId).planet.time,
+          undefined
+        );
 
         const buildingCache = this.caches.building.withPlanetId(request.planetId);
         const definition: BuildingDefinition | null = buildingCache.buildingConfigurations.definitionById[building.definitionId];
@@ -273,6 +289,23 @@ export default class ModelEventServer {
 
         await this.replySocket.send(JSON.stringify({ building: building.toJson() }));
         await this.publisherSocket.send(['BUILDING:UPDATE', JSON.stringify({ planetId: request.planetId, building: building.toJson() })])
+      }
+
+      else if (request.type === 'BUILDING_LABOR:LIST') {
+        const labors: BuildingLabor[] = await this.stores.buildingByPlanet[request.planetId]?.laborsForBuildingId(request.buildingId) ?? [];
+        await this.replySocket.send(JSON.stringify({ labors: labors.map(c => c.toJson()) }));
+      }
+      else if (request.type === 'BUILDING_LABOR:GET') {
+        const labor: BuildingLabor | undefined = await this.stores.buildingByPlanet[request.planetId]?.getLabor(request.id);
+        await this.replySocket.send(JSON.stringify(labor ? { labor: labor.toJson() } : {}));
+      }
+      else if (request.type === 'BUILDING_PRODUCT:LIST') {
+        const products: BuildingProduct[] = await this.stores.buildingByPlanet[request.planetId]?.productsForBuildingId(request.buildingId) ?? [];
+        await this.replySocket.send(JSON.stringify({ products: products.map(c => c.toJson()) }));
+      }
+      else if (request.type === 'BUILDING_PRODUCT:GET') {
+        const product: BuildingProduct | undefined = await this.stores.buildingByPlanet[request.planetId]?.getProduct(request.id);
+        await this.replySocket.send(JSON.stringify(product ? { product: product.toJson() } : {}));
       }
 
       else if (request.type === 'MAIL:LIST') {

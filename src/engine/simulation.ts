@@ -1,3 +1,4 @@
+import { TaskTimer } from 'tasktimer';
 import winston from 'winston';
 
 import SimulationEventPublisher from '../core/events/simulation-event-publisher';
@@ -14,7 +15,6 @@ import Corporation from '../corporation/corporation';
 import Town from '../planet/town';
 import Building from '../building/building';
 import Company from '../company/company';
-import Utils from '../utils/utils';
 import TycoonCache from '../tycoon/tycoon-cache';
 import BuildingCache from '../building/building-cache';
 import RankingsCache from '../corporation/rankings-cache';
@@ -40,6 +40,7 @@ export interface SimulationCaches {
 export default class Simulation {
   logger: winston.Logger;
   simulationLogger: winston.Logger;
+  timer: TaskTimer;
   eventPublisher: SimulationEventPublisher;
 
   planetId: string;
@@ -58,6 +59,10 @@ export default class Simulation {
     this.inventionConfigurations = inventionConfigurations;
     this.caches = caches;
     this.context = context;
+
+    this.timer = new TaskTimer(FRAME_DURATION_MS);
+    this.timer.on(TaskTimer.Event.TICK, () => this.mainLoop());
+    this.timer.on(TaskTimer.Event.STOPPED, () => this.logger.info('Engine stopped'));
 
     this.simulationLogger = Logger.createSimulationLogger();
   }
@@ -84,21 +89,29 @@ export default class Simulation {
     }
   }
 
+  waitForLoaded (): void {
+    if (!this.running) {
+      this.logger.info('Engine stopped');
+      return;
+    }
+
+    // TODO: need to wait for caches?
+    // if (!this.simulationStateCache.loaded || !this.simulationStateCache.state || !this.actorCache.loaded) {
+    //   setTimeout(() => this.waitForLoaded(), 1000);
+    //   return;
+    // }
+
+    this.timer.start();
+  }
+
   mainLoop (): void {
     if (!this.running) {
       this.logger.info('Engine stopped');
       return;
     }
 
-    const startMs = Utils.currentMs();
     const frame: SimulationFrame = this.simulate();
-    const endMs = Utils.currentMs();
-
-    const durationMs = Math.round(endMs - startMs);
-    const toWait = durationMs > FRAME_DURATION_MS ? 0 : Math.max(0, (FRAME_DURATION_MS - durationMs));
-
     this.eventPublisher.sendEvent(frame);
-    setTimeout(() => this.mainLoop(), toWait);
   }
 
   simulateResarch (companyById: Record<string, Company>, finances: SimulationFinancesFrame): SimulationResearchFrame {

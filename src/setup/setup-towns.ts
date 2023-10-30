@@ -1,15 +1,17 @@
 import fs from 'fs-extra';
 import path from 'path';
+import { DateTime } from 'luxon';
 
-import { BuildingImageDefinition } from '@starpeace/starpeace-assets-types';
+import { BuildingImageDefinition, TownhallDefinition, TradeCenterDefinition } from '@starpeace/starpeace-assets-types';
 
 import Building from "../building/building";
-import BuildingStore from "../building/building-store";
+import BuildingProduct from '../building/building-product';
+import BuildingLabor from '../building/building-labor';
 import Town from "../planet/town";
-import TownStore from "../planet/town-store";
 import Utils from "../utils/utils";
 
 import { SetupConfigurations } from '../setup';
+import { SetupPlanetStores } from './setup-planet';
 
 
 const SEAL_TOWN_MAPPINGS: Record<string, any> = {
@@ -31,27 +33,13 @@ const SEAL_TOWN_MAPPINGS: Record<string, any> = {
   }
 };
 
-const createBuilding = (mapX: number, mapY: number, offsetX: number, offsetY: number, buildingDefinition: any, townId: string) => {
-  return new Building(
-    Utils.uuid(),
-    'IFEL',
-    'IFEL',
-    'IFEL',
-    buildingDefinition.id,
-    townId,
-    null,
-    mapX + offsetX,
-    mapY + offsetY,
-    0
-  );
-}
-
-
 export default class SetupTowns {
+  stores: SetupPlanetStores;
   configurations: SetupConfigurations;
   seed: number;
 
-  constructor (configurations: SetupConfigurations, seed: number) {
+  constructor (stores: SetupPlanetStores, configurations: SetupConfigurations, seed: number) {
+    this.stores = stores;
     this.configurations = configurations;
     this.seed = seed ?? 0;
   }
@@ -112,9 +100,9 @@ export default class SetupTowns {
   }
 
   async export (planetId: string, mapId: string) {
-    const buildingStore = new BuildingStore(false, planetId);
-    const townStore = new TownStore(false, planetId);
-    const towns: Town[] = await townStore.all();
+    const simulationTime: DateTime | undefined = (await this.stores.planet.get())?.time;
+    if (!simulationTime) throw new Error('Unable to determine planet time');
+    const towns: Town[] = await this.stores.town.all();
 
     if (!towns?.length) {
       console.log(`Configuring towns on planet ${planetId} with map ${mapId}`);
@@ -133,6 +121,9 @@ export default class SetupTowns {
         const townhallBuilding = this.configurations.building.definitions[mapping.townhall];
         const tradecenterBuilding = this.configurations.building.definitions[mapping.tradecenter];
 
+        const townhallDefinition = this.configurations.building.simulations[mapping.townhall] as TownhallDefinition;
+        const tradecenterDefinition = this.configurations.building.simulations[mapping.tradecenter] as TradeCenterDefinition;
+
         const townhallImage = this.configurations.building.images[townhallBuilding.imageId];
         const tradecenterImage = this.configurations.building.images[tradecenterBuilding.imageId];
 
@@ -145,9 +136,9 @@ export default class SetupTowns {
         const townY = 1000 - townConfig.mapX;
 
         const townId = Utils.uuid();
-        const townhall = createBuilding(townX, townY, layout.townhall[0], layout.townhall[1], townhallBuilding, townId);
-        const tradecenter = createBuilding(townX, townY, layout.tradecenter[0], layout.tradecenter[1], tradecenterBuilding, townId);
-        const portal = createBuilding(townX, townY, layout.portal[0], layout.portal[1], portalBuilding, townId);
+        const townhall = new Building(Utils.uuid(), 'IFEL', 'IFEL', 'IFEL', townhallBuilding.id, townId, null, townX + layout.townhall[0], townY + layout.townhall[1], 0, simulationTime, simulationTime);
+        const tradecenter = new Building(Utils.uuid(), 'IFEL', 'IFEL', 'IFEL', tradecenterBuilding.id, townId, null, townX + layout.tradecenter[0], townY + layout.tradecenter[1], 0, simulationTime, simulationTime);
+        const portal = new Building(Utils.uuid(), 'IFEL', 'IFEL', 'IFEL', portalBuilding.id, townId, null, townX + layout.portal[0], townY + layout.portal[1], 0, simulationTime, simulationTime);
 
         const town = new Town(
           townId,
@@ -159,19 +150,27 @@ export default class SetupTowns {
           townhall.mapY
         );
 
-        townStore.set(town);
+        this.stores.town.set(town);
         console.log(`Saved town ${town.name} to database`);
 
-        buildingStore.set(townhall);
-        console.log(`Saved townhall at (${townhall.mapX}, ${townhall.mapY}) to database`);
-        buildingStore.set(tradecenter)
-        console.log(`Saved tradecenter at (${tradecenter.mapX}, ${tradecenter.mapY}) to database`);
-        buildingStore.set(portal)
+        this.stores.building.set(townhall);
+        for (const labor of townhallDefinition.labor) {
+          this.stores.building.setLabor(new BuildingLabor(Utils.uuid(), tradecenter.id, labor.resourceId, this.configurations.industry.resourceTypes[labor.resourceId].price, labor.maxVelocity, labor.weightEfficiency, labor.weightQuality));
+        }
+        console.log(`Saved townhall at (${townhall.mapX}, ${townhall.mapY}) with ${townhallDefinition.labor.length} labor to database`);
+
+        this.stores.building.set(tradecenter)
+        for (const labor of tradecenterDefinition.labor) {
+          this.stores.building.setLabor(new BuildingLabor(Utils.uuid(), tradecenter.id, labor.resourceId, this.configurations.industry.resourceTypes[labor.resourceId].price, labor.maxVelocity, labor.weightEfficiency, labor.weightQuality));
+        }
+        for (const product of tradecenterDefinition.products) {
+          this.stores.building.setProduct(new BuildingProduct(Utils.uuid(), tradecenter.id, product.resourceId, false, this.configurations.industry.resourceTypes[product.resourceId].price, .4, product.maxVelocity, product.weightEfficiency, product.weightQuality));
+        }
+        console.log(`Saved tradecenter at (${tradecenter.mapX}, ${tradecenter.mapY}) with ${tradecenterDefinition.labor.length} labor and ${tradecenterDefinition.products.length} products to database`);
+
+        this.stores.building.set(portal)
         console.log(`Saved portal at (${portal.mapX}, ${portal.mapY}) to database`);
       }
     }
-
-    await buildingStore.close()
-    await townStore.close()
   }
 }

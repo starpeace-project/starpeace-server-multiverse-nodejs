@@ -52,7 +52,8 @@ const planetByPlanet = Object.fromEntries(planetIds.map((id) => [id, new PlanetC
 const rankingsByPlanet = Object.fromEntries(planetIds.map((id) => [id, new RankingsCache(new RankingsStore(false, id))]));
 const townByPlanet = Object.fromEntries(planetIds.map((id) => [id, new TownCache(new TownStore(false, id))]));
 
-const buildingByPlanet = Object.fromEntries(planetIds.map((id) => [id, new BuildingCache(new BuildingStore(false, id), galaxyManager.forPlanetRequired(id).planetWidth, galaxyManager.metadataBuildingForPlanet(id) ?? new BuildingConfigurations([], [], []), townByPlanet[id])]));
+const buildingStoreByPlanet = Object.fromEntries(planetIds.map((id) => [id, new BuildingStore(false, id)]));
+const buildingByPlanet = Object.fromEntries(planetIds.map((id) => [id, new BuildingCache(buildingStoreByPlanet[id], galaxyManager.forPlanetRequired(id).planetWidth, galaxyManager.metadataBuildingForPlanet(id) ?? new BuildingConfigurations([], [], []), townByPlanet[id])]));
 const inventionSummaryByPlanet = Object.fromEntries(planetIds.map((id) => [id, new InventionSummaryCache(new InventionSummaryStore(false, id), galaxyManager.metadataInventionForPlanet(id) ?? new InventionConfigurations([]), companyByPlanet[id])]));
 
 const caches = {
@@ -72,6 +73,7 @@ const modelServer = new ModelEventServer(logger, {
   tycoon: tycoonStore,
   tycoonToken: tycoonTokenStore,
   bookmarkByPlanet: bookmarkByPlanet,
+  buildingByPlanet: buildingStoreByPlanet,
   mailByPlanet: mailByPlanet
 }, caches);
 

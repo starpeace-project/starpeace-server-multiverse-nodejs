@@ -8,6 +8,8 @@ import TycoonVisa from '../../tycoon/tycoon-visa';
 
 import Bookmark from '../../corporation/bookmark';
 import Building from '../../building/building';
+import BuildingLabor from '../../building/building-labor';
+import BuildingProduct from '../../building/building-product';
 import Company from '../../company/company';
 import Corporation from '../../corporation/corporation';
 import Mail from '../../corporation/mail';
@@ -167,9 +169,9 @@ export default class ModelEventClient {
       return (JSON.parse(result.toString()).buildings ?? []).map(Building.fromJson);
     });
   }
-  async constructBuilding (planetId: string, building: Building): Promise<Building> {
+  async constructBuilding (planetId: string, tycoonId: string, corporationId: string, companyId: string, definitionId: string, townId: string, name: string | undefined, mapX: number, mapY: number): Promise<Building> {
     return await this.requestQueue.add(async () => {
-      await this.requestSocket.send(JSON.stringify({ type: 'BUILDING:CREATE', planetId: planetId, building: building.toJson() }));
+      await this.requestSocket.send(JSON.stringify({ type: 'BUILDING:CREATE', planetId, tycoonId, corporationId, companyId, definitionId, townId, name, mapX, mapY }));
       const [result] = await this.requestSocket.receive();
       const jsonResult = JSON.parse(result.toString());
       if (jsonResult.error) {
@@ -179,6 +181,37 @@ export default class ModelEventClient {
         return Building.fromJson(jsonResult.building);
       }
     }, { throwOnTimeout: true });
+  }
+
+  async listBuildingLabors (planetId: string, buildingId: string): Promise<BuildingLabor[]> {
+    return await this.requestQueue.add(async () => {
+      await this.requestSocket.send(JSON.stringify({ type: 'BUILDING_LABOR:LIST', planetId: planetId, buildingId: buildingId }));
+      const [result] = await this.requestSocket.receive();
+      return (JSON.parse(result.toString()).labors ?? []).map(BuildingLabor.fromJson);
+    });
+  }
+  async getBuildingLabor (planetId: string, id: string): Promise<BuildingLabor | undefined> {
+    return await this.requestQueue.add(async () => {
+      await this.requestSocket.send(JSON.stringify({ type: 'BUILDING_LABOR:GET', planetId: planetId, id: id }));
+      const [result] = await this.requestSocket.receive();
+      const json = JSON.parse(result.toString()).labor;
+      return json ? BuildingLabor.fromJson(json) : undefined;
+    });
+  }
+  async listBuildingProducts (planetId: string, buildingId: string): Promise<BuildingProduct[]> {
+    return await this.requestQueue.add(async () => {
+      await this.requestSocket.send(JSON.stringify({ type: 'BUILDING_PRODUCT:LIST', planetId: planetId, buildingId: buildingId }));
+      const [result] = await this.requestSocket.receive();
+      return (JSON.parse(result.toString()).products ?? []).map(BuildingProduct.fromJson);
+    });
+  }
+  async getBuildingProduct (planetId: string, id: string): Promise<BuildingProduct | undefined> {
+    return await this.requestQueue.add(async () => {
+      await this.requestSocket.send(JSON.stringify({ type: 'BUILDING_PRODUCT:GET', planetId: planetId, id: id }));
+      const [result] = await this.requestSocket.receive();
+      const json = JSON.parse(result.toString()).product;
+      return json ? BuildingProduct.fromJson(json) : undefined;
+    });
   }
 
   async getCompanyInventionSummary (planetId: string, companyId: string): Promise<InventionSummary> {

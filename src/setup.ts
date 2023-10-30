@@ -22,7 +22,7 @@ export interface SetupIndustryConfigurations {
   industryCategories: IndustryCategory[];
   industryTypes: IndustryType[];
   levels: Level[];
-  resourceTypes: ResourceType[];
+  resourceTypes: Record<string, ResourceType>;
   resourceUnits: ResourceUnit[];
 }
 export interface SetupConfigurations {
@@ -82,7 +82,7 @@ const loadConfigurations = async (): Promise<{ configurations: SetupConfiguratio
         industryCategories: FileUtils.parseToJson(industryDir, ['industry-categories.json'], []).map(IndustryCategory.fromJson),
         industryTypes: FileUtils.parseToJson(industryDir, ['industry-types.json'], []).map(IndustryType.fromJson),
         levels: FileUtils.parseToJson(industryDir, ['levels.json'], []).map(Level.fromJson),
-        resourceTypes: FileUtils.parseToJson(industryDir, ['resource-types.json'], []).map(ResourceType.fromJson),
+        resourceTypes: _.keyBy(FileUtils.parseToJson(industryDir, ['resource-types.json'], []).map(ResourceType.fromJson), 'id'),
         resourceUnits: FileUtils.parseToJson(industryDir, ['resource-units.json'], []).map(ResourceUnit.fromJson),
       },
       inventions: FileUtils.parseToJson(inventionsDir, ['.json'], []).map(InventionDefinition.fromJson),
@@ -137,6 +137,25 @@ const loadPlanets = async ({ configurations, galaxyMetadata }: any): Promise<{ c
 loadConfigurations()
   .then(setupConfiguration)
   .then(loadPlanets)
+  .then(async ({ configurations, galaxyMetadata, planets }: any) => {
+    if (!planets.length) {
+      const id = Utils.uuid();
+      const planet = {
+        id: id,
+        name: "Ancoeus",
+        enabled: true,
+        planetType: "earth",
+        planetWidth: 1000,
+        planetHeight: 1000,
+        mapId: "ancoeus",
+        corporationInitialCash: 100000000000
+      };
+      fs.mkdirSync(`./galaxy/${id}`, { recursive: true });
+      fs.writeFileSync(`./galaxy/${id}/planet.config.json`, JSON.stringify(planet));
+      planets.push(planet);
+    }
+    return { configurations, galaxyMetadata, planets };
+  })
   .then(async ({ configurations, galaxyMetadata, planets }: any) => {
     for (let planet of planets) {
       await new SetupPlanet(configurations, galaxyMetadata, planet).export();

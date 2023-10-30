@@ -62,7 +62,7 @@ export default class SetupPlanet {
 
     this.metadata = new SetupPlanetMetadata(configurations);
     this.simulation = new SetupSimulation(this.stores);
-    this.towns = new SetupTowns(configurations, Math.floor(Math.random() * 2));
+    this.towns = new SetupTowns(this.stores, configurations, Math.floor(Math.random() * 2));
   }
 
   async export () {

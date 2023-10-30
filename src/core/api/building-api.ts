@@ -2,14 +2,17 @@ import _ from 'lodash';
 import express from 'express';
 import winston from 'winston';
 
+import { BuildingDefinition } from '@starpeace/starpeace-assets-types';
+
 import GalaxyManager from '../galaxy-manager';
 import ModelEventClient from '../events/model-event-client';
 import { ApiCaches } from './api-factory';
 
 import Building from '../../building/building';
+import BuildingLabor from '../../building/building-labor';
+import BuildingProduct from '../../building/building-product';
 import Company from '../../company/company';
 import Town from '../../planet/town';
-import { BuildingDefinition } from '@starpeace/starpeace-assets-types';
 
 
 export default class BuildingApi {
@@ -58,6 +61,45 @@ export default class BuildingApi {
     };
   }
 
+  getBuildingDetails (): (req: express.Request, res: express.Response) => any {
+    return async (req: express.Request, res: express.Response) => {
+      if (!req.planet || !req.params.buildingId) return res.status(400);
+      try {
+        const building: Building | null = this.caches.building.withPlanet(req.planet).forId(req.params.buildingId);
+        if (!building) return res.status(404);
+
+        const labors: BuildingLabor[] = await this.modelEventClient.listBuildingLabors(req.planet.id, building.id);
+        const products: BuildingProduct[] = await this.modelEventClient.listBuildingProducts(req.planet.id, building.id);
+
+        return res.json({
+          id: req.params.buildingId,
+          labors: labors.map((l) => {
+            return {
+              resourceId: l.resourceId,
+              price: l.price,
+              totalVelocity: 0,
+              quality: 0,
+              connections: []
+            };
+          }),
+          products: products.map((p) => {
+            return {
+              resourceId: p.resourceId,
+              price: p.price,
+              totalVelocity: 0,
+              quality: p.quality,
+              connections: []
+            };
+          }),
+        });
+      }
+      catch (err) {
+        this.logger.error(err);
+        return res.status(500);
+      }
+    };
+  }
+
   createBuilding (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
       if (!req.planet || !req.visa || !req.visa.corporationId || !req.body.companyId || !req.body.definitionId) return res.status(400).json({});
@@ -78,7 +120,7 @@ export default class BuildingApi {
         const town = this.caches.map.withPlanet(req.planet).findTown(mapX, mapY);
         if (!town) return res.status(400).json({});
 
-        const building: Building = await this.modelEventClient.constructBuilding(req.planet.id, Building.create(req.visa.tycoonId, req.visa.corporationId, company.id, definition.id, town.id, name, mapX, mapY));
+        const building: Building = await this.modelEventClient.constructBuilding(req.planet.id, req.visa.tycoonId, req.visa.corporationId, company.id, definition.id, town.id, name, mapX, mapY);
 
         if (!building) return res.status(404).json({});
         return res.json(building.toJson());

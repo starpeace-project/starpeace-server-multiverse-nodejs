@@ -96,8 +96,9 @@ export default class BusFactory {
       connectionManager.connectSocket(socket.id, user.id);
 
       const corporationCache: CorporationCache = caches.corporation.withPlanetId(visa.planetId);
+      const companyCache: CompanyCache = caches.company.withPlanetId(visa.planetId);
       const corporation: Corporation | null = visa.corporationId ? corporationCache.forId(visa.corporationId) : visa.isTycoon ? corporationCache.forTycoonId(user.id) : null;
-      const companies: Company[] = [];
+      const companies: Company[] = corporation ? companyCache.forCorporationId(corporation.id) : [];
       const cashflowJson: any = !corporation ? null : {
         id: corporation.id,
         lastMailAt: corporation.lastMailAt?.toISO(),

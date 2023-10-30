@@ -130,7 +130,7 @@ export default class SetupPlanetMetadata {
       industryTypes: this.configurations.industry.industryTypes.map(t => t.toJson()),
       levels: this.configurations.industry.levels.map(l => l.toJson()),
       rankingTypes: this.createRankings(),
-      resourceTypes: this.configurations.industry.resourceTypes.map(t => t.toJson()),
+      resourceTypes: Object.values(this.configurations.industry.resourceTypes).map(t => t.toJson()),
       resourceUnits: this.configurations.industry.resourceUnits.map(u => u.toJson()),
       seals: this.configurations.seals.map(s => s.toJson())
     }))

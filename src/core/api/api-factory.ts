@@ -180,6 +180,7 @@ export default class ApiFactory {
     app.get('/buildings', authenticate, verifyPlanet, verifyVisa, buildingApi.getBuildings());
     app.post('/buildings', authenticate, verifyPlanet, verifyTycoon, buildingApi.createBuilding());
     app.get('/buildings/:buildingId', authenticate, verifyPlanet, verifyVisa, buildingApi.getBuilding());
+    app.get('/buildings/:buildingId/details', authenticate, verifyPlanet, verifyVisa, buildingApi.getBuildingDetails());
 
     app.get('/corporations', authenticate, verifyPlanet, verifyVisa, corporationApi.getPlanetCorporations());
     app.post('/corporations', authenticate, verifyPlanet, verifyTycoon, corporationApi.createCorporation());
