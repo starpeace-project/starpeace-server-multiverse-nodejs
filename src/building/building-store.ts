@@ -1,9 +1,9 @@
-import * as sqlite3 from 'sqlite3';
+import sqlite3 from 'sqlite3';
 
-import Building from '../building/building';
-import BuildingDao from '../building/building-dao';
-import BuildingLabor from '../building/building-labor';
-import BuildingProduct from '../building/building-product';
+import Building from '../building/building.js';
+import type BuildingDao from '../building/building-dao.js';
+import BuildingLabor from '../building/building-labor.js';
+import BuildingProduct from '../building/building-product.js';
 
 
 export default class BuildingStore implements BuildingDao {

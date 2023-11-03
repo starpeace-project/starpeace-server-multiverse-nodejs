@@ -1,7 +1,7 @@
-import * as sqlite3 from 'sqlite3';
+import sqlite3 from 'sqlite3';
 
-import InventionSummary from './invention-summary';
-import InventionSummaryDao from './invention-summary-dao';
+import InventionSummary from './invention-summary.js';
+import type InventionSummaryDao from './invention-summary-dao.js';
 
 
 export default class InventionSummaryStore implements InventionSummaryDao {

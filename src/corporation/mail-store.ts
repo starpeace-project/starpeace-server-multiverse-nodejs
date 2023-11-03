@@ -1,6 +1,6 @@
-import * as sqlite3 from 'sqlite3';
+import sqlite3 from 'sqlite3';
 
-import Mail from '../corporation/mail';
+import Mail from '../corporation/mail.js';
 
 
 export default class MailStore {

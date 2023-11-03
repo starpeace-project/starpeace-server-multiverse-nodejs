@@ -1,7 +1,7 @@
-import * as sqlite3 from 'sqlite3';
+import sqlite3 from 'sqlite3';
 
-import Planet from './planet';
-import PlanetDao from './planet-dao';
+import Planet from './planet.js';
+import type PlanetDao from './planet-dao.js';
 
 export default class PlanetStore implements PlanetDao {
   readOnly: boolean;

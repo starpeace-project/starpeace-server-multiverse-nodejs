@@ -3,13 +3,13 @@ import passport from 'passport';
 import jwt from 'jsonwebtoken';
 import winston from 'winston';
 
-import GalaxyManager from '../galaxy-manager';
-import ModelEventClient from '../events/model-event-client';
-import { ApiCaches } from './api-factory';
+import GalaxyManager from '../galaxy-manager.js';
+import ModelEventClient from '../events/model-event-client.js';
+import { type ApiCaches } from './api-factory.js';
 
-import Company from '../../company/company';
-import Corporation from '../../corporation/corporation';
-import Tycoon from '../../tycoon/tycoon';
+import Company from '../../company/company.js';
+import Corporation from '../../corporation/corporation.js';
+import Tycoon from '../../tycoon/tycoon.js';
 
 
 export default class GalaxyApi {

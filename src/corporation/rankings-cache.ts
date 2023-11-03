@@ -1,6 +1,6 @@
-import Rankings from './rankings';
-import RankingsDao from '../corporation/rankings-dao';
-import Utils from '../utils/utils';
+import Rankings from './rankings.js';
+import type RankingsDao from '../corporation/rankings-dao.js';
+import Utils from '../utils/utils.js';
 
 export default class RankingsCache {
   dao: RankingsDao;

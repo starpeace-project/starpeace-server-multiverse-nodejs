@@ -1,8 +1,8 @@
 import _ from 'lodash';
-import * as sqlite3 from 'sqlite3';
+import sqlite3 from 'sqlite3';
 
-import Tycoon from '../tycoon/tycoon';
-import TycoonDao from './tycoon-dao';
+import Tycoon from '../tycoon/tycoon.js';
+import type TycoonDao from './tycoon-dao.js';
 
 export default class TycoonStore implements TycoonDao {
   readOnly: boolean;

@@ -1,7 +1,7 @@
-import ModelEventClient from '../core/events/model-event-client';
-import Utils from '../utils/utils';
+import ModelEventClient from '../core/events/model-event-client.js';
+import Utils from '../utils/utils.js';
 
-import InventionSummary from './invention-summary';
+import InventionSummary from './invention-summary.js';
 
 export function asInventionSummaryDao (client: ModelEventClient, planetId: string): InventionSummaryDao {
   return {

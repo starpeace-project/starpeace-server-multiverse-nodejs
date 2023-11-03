@@ -1,9 +1,14 @@
 import _ from 'lodash';
 import fs from 'fs-extra';
-import path from 'path';
+import path, { dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 import { BuildingDefinition } from '@starpeace/starpeace-assets-types';
-import { SetupConfigurations } from '../setup';
+
+import { type SetupConfigurations } from '../setup.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export default class SetupPlanetMetadata {
   configurations: SetupConfigurations;

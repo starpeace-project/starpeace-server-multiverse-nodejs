@@ -1,6 +1,6 @@
-import * as sqlite3 from 'sqlite3';
+import sqlite3 from 'sqlite3';
 
-import Bookmark from '../corporation/bookmark';
+import Bookmark from '../corporation/bookmark.js';
 
 
 export default class BookmarkStore {

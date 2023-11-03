@@ -1,31 +1,31 @@
 import _ from 'lodash';
 import http from 'http';
 import jwt from 'jsonwebtoken';
-import socketio from 'socket.io';
+import { Server, Socket as ioSocket } from 'socket.io';
 import winston from 'winston';
 
-import ConnectionManager from '../connection-manager';
-import ModelEventPublisher from '../events/model-event-publisher';
-import { HttpServerCaches } from '../http-server';
-import SimulationFrame from '../../engine/simulation-frame';
+import ConnectionManager from '../connection-manager.js';
+import ModelEventPublisher from '../events/model-event-publisher.js';
+import { type HttpServerCaches } from '../http-server.js';
+import SimulationFrame from '../../engine/simulation-frame.js';
 
-import GalaxyManager from '../galaxy-manager';
+import GalaxyManager from '../galaxy-manager.js';
 
-import Company from '../../company/company';
-import CompanyCache from '../../company/company-cache';
-import Corporation from '../../corporation/corporation';
-import CorporationCache from '../../corporation/corporation-cache';
-import InventionSummaryCache from '../../company/invention-summary-cache';
-import Planet from '../../planet/planet';
-import PlanetCache from '../../planet/planet-cache';
-import Tycoon from '../../tycoon/tycoon';
-import TycoonVisa from '../../tycoon/tycoon-visa';
+import Company from '../../company/company.js';
+import CompanyCache from '../../company/company-cache.js';
+import Corporation from '../../corporation/corporation.js';
+import CorporationCache from '../../corporation/corporation-cache.js';
+import InventionSummaryCache from '../../company/invention-summary-cache.js';
+import Planet from '../../planet/planet.js';
+import PlanetCache from '../../planet/planet-cache.js';
+import Tycoon from '../../tycoon/tycoon.js';
+import TycoonVisa from '../../tycoon/tycoon-visa.js';
 
 
 export default class BusFactory {
 
-  static create (server: http.Server, galaxyManager: GalaxyManager, caches: HttpServerCaches): socketio.Server {
-    const io = new socketio.Server(server, {
+  static create (server: http.Server, galaxyManager: GalaxyManager, caches: HttpServerCaches): Server {
+    const io = new Server(server, {
       cors: {
         origin: [/localhost\:11010/, 'https://client.starpeace.io'],
         credentials: true
@@ -37,8 +37,8 @@ export default class BusFactory {
     return io;
   }
 
-  static configureAuthentication (io: socketio.Server, galaxyManager: GalaxyManager, caches: HttpServerCaches): void {
-    io.use((socket: socketio.Socket, next: (err?: Error) => void) => {
+  static configureAuthentication (io: Server, galaxyManager: GalaxyManager, caches: HttpServerCaches): void {
+    io.use((socket: ioSocket, next: (err?: Error) => void) => {
       socket.request.headers['Authorization'] = `JWT ${socket.handshake.query.JWT}`;
       socket.request.headers['PlanetId'] = socket.handshake.query.PlanetId;
       socket.request.headers['VisaId'] = socket.handshake.query.VisaId;
@@ -51,7 +51,7 @@ export default class BusFactory {
         return next();
       });
     });
-    io.use((socket: socketio.Socket, next) => {
+    io.use((socket: ioSocket, next) => {
       if (socket.data.user) {
         next();
       } else {
@@ -60,8 +60,8 @@ export default class BusFactory {
     });
   }
 
-  static configureEvents (logger: winston.Logger, io: socketio.Server, connectionManager: ConnectionManager, modelEventPublisher: ModelEventPublisher, caches: HttpServerCaches): void {
-    io.on('connect', (socket: socketio.Socket) => {
+  static configureEvents (logger: winston.Logger, io: Server, connectionManager: ConnectionManager, modelEventPublisher: ModelEventPublisher, caches: HttpServerCaches): void {
+    io.on('connect', (socket: ioSocket) => {
       if (!connectionManager.state.running) {
         socket.disconnect(true);
         return;
@@ -126,7 +126,7 @@ export default class BusFactory {
     });
   }
 
-  static notifySockets (logger: winston.Logger, caches: HttpServerCaches, event: SimulationFrame, socketsByTycoonId: Record<string, socketio.Socket>): void {
+  static notifySockets (logger: winston.Logger, caches: HttpServerCaches, event: SimulationFrame, socketsByTycoonId: Record<string, ioSocket>): void {
     const planet: Planet = caches.planet.withPlanetId(event.planetId).update(event.planet);
     const corporationCache: CorporationCache = caches.corporation.withPlanetId(event.planetId);
     const companyCache: CompanyCache = caches.company.withPlanetId(event.planetId);

@@ -3,12 +3,12 @@ import EventEmitter from 'events';
 import winston from 'winston';
 import { Subscriber } from 'zeromq';
 
-import Building from '../../building/building';
-import Company from '../../company/company';
-import Corporation from '../../corporation/corporation';
-import Tycoon from '../../tycoon/tycoon';
-import TycoonVisa from '../../tycoon/tycoon-visa';
-import InventionSummary from '../../company/invention-summary';
+import Building from '../../building/building.js';
+import Company from '../../company/company.js';
+import Corporation from '../../corporation/corporation.js';
+import Tycoon from '../../tycoon/tycoon.js';
+import TycoonVisa from '../../tycoon/tycoon-visa.js';
+import InventionSummary from '../../company/invention-summary.js';
 
 const ASYNC_SERVER_TO_CLIENT_PORT = 19166;
 

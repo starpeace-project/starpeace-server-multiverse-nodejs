@@ -1,18 +1,21 @@
 import fs from 'fs-extra';
-import path from 'path';
 import { DateTime } from 'luxon';
+import path, { dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 import { BuildingImageDefinition, TownhallDefinition, TradeCenterDefinition } from '@starpeace/starpeace-assets-types';
 
-import Building from "../building/building";
-import BuildingProduct from '../building/building-product';
-import BuildingLabor from '../building/building-labor';
-import Town from "../planet/town";
-import Utils from "../utils/utils";
+import Building from "../building/building.js";
+import BuildingProduct from '../building/building-product.js';
+import BuildingLabor from '../building/building-labor.js';
+import Town from "../planet/town.js";
+import Utils from "../utils/utils.js";
 
-import { SetupConfigurations } from '../setup';
-import { SetupPlanetStores } from './setup-planet';
+import { type SetupConfigurations } from '../setup.js';
+import { type SetupPlanetStores } from './setup-planet.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const SEAL_TOWN_MAPPINGS: Record<string, any> = {
   'DIS': {
@@ -44,7 +47,7 @@ export default class SetupTowns {
     this.seed = seed ?? 0;
   }
 
-  planBuilding (townhallPosition: number, townhallImage: BuildingImageDefinition, buildingPosition: number, buildingImage: BuildingImageDefinition) {
+  static planBuilding (seed: number, townhallPosition: number, townhallImage: BuildingImageDefinition, buildingPosition: number, buildingImage: BuildingImageDefinition) {
     const townhallDeltaX = townhallPosition == 1 || townhallPosition == 2;
     const townhallDeltaY = townhallPosition == 2 || townhallPosition == 3;
 
@@ -55,7 +58,7 @@ export default class SetupTowns {
     let offsetY = 0;
 
     if (townhallPosition == buildingPosition) {
-      if (this.seed) {
+      if (seed) {
         offsetX += townhallDeltaX ? buildingImage.tileWidth : -townhallImage.tileWidth;
       }
       else {
@@ -94,8 +97,8 @@ export default class SetupTowns {
 
     return {
       townhall: [0, 0],
-      tradecenter: this.planBuilding(townhallPosition, townhallImage, tradecenterPosition, tradecenterImage),
-      portal: this.planBuilding(townhallPosition, townhallImage, portalPosition, portalImage)
+      tradecenter: SetupTowns.planBuilding(this.seed, townhallPosition, townhallImage, tradecenterPosition, tradecenterImage),
+      portal: SetupTowns.planBuilding(this.seed, townhallPosition, townhallImage, portalPosition, portalImage)
     };
   }
 
@@ -155,7 +158,7 @@ export default class SetupTowns {
 
         this.stores.building.set(townhall);
         for (const labor of townhallDefinition.labor) {
-          this.stores.building.setLabor(new BuildingLabor(Utils.uuid(), tradecenter.id, labor.resourceId, this.configurations.industry.resourceTypes[labor.resourceId].price, labor.maxVelocity, labor.weightEfficiency, labor.weightQuality));
+          this.stores.building.setLabor(new BuildingLabor(Utils.uuid(), townhall.id, labor.resourceId, this.configurations.industry.resourceTypes[labor.resourceId].price, labor.maxVelocity, labor.weightEfficiency, labor.weightQuality));
         }
         console.log(`Saved townhall at (${townhall.mapX}, ${townhall.mapY}) with ${townhallDefinition.labor.length} labor to database`);
 

@@ -1,8 +1,8 @@
-import CompanyCache from './company-cache';
-import InventionSummary from './invention-summary';
-import InventionSummaryDao from './invention-summary-dao';
-import Utils from '../utils/utils';
-import { InventionConfigurations } from '../core/galaxy-manager';
+import CompanyCache from './company-cache.js';
+import InventionSummary from './invention-summary.js';
+import type InventionSummaryDao from './invention-summary-dao.js';
+import Utils from '../utils/utils.js';
+import { InventionConfigurations } from '../core/galaxy-manager.js';
 
 
 export default class InventionSummaryCache {

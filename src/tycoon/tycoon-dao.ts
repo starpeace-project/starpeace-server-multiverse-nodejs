@@ -1,7 +1,7 @@
-import ModelEventClient from '../core/events/model-event-client';
-import Utils from '../utils/utils';
+import ModelEventClient from '../core/events/model-event-client.js';
+import Utils from '../utils/utils.js';
 
-import Tycoon from './tycoon';
+import Tycoon from './tycoon.js';
 
 export function asTycoonDao (client: ModelEventClient): TycoonDao {
   return {

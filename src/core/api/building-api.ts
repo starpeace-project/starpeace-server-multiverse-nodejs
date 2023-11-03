@@ -4,15 +4,15 @@ import winston from 'winston';
 
 import { BuildingDefinition } from '@starpeace/starpeace-assets-types';
 
-import GalaxyManager from '../galaxy-manager';
-import ModelEventClient from '../events/model-event-client';
-import { ApiCaches } from './api-factory';
+import GalaxyManager from '../galaxy-manager.js';
+import ModelEventClient from '../events/model-event-client.js';
+import { type ApiCaches } from './api-factory.js';
 
-import Building from '../../building/building';
-import BuildingLabor from '../../building/building-labor';
-import BuildingProduct from '../../building/building-product';
-import Company from '../../company/company';
-import Town from '../../planet/town';
+import Building from '../../building/building.js';
+import BuildingLabor from '../../building/building-labor.js';
+import BuildingProduct from '../../building/building-product.js';
+import Company from '../../company/company.js';
+import Town from '../../planet/town.js';
 
 
 export default class BuildingApi {
@@ -77,9 +77,9 @@ export default class BuildingApi {
             return {
               resourceId: l.resourceId,
               price: l.price,
-              totalVelocity: 0,
-              quality: 0,
-              connections: []
+              maxVelocity: l.maxVelocity,
+              mostRecentVelocity: 0,
+              quality: 0
             };
           }),
           products: products.map((p) => {

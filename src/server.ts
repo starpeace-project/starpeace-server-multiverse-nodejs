@@ -1,7 +1,7 @@
 import cluster from 'cluster';
 
-import ProcessManager from './process/process-manager';
-import HttpServer from './core/http-server';
+import ProcessManager from './process/process-manager.js';
+import HttpServer from './core/http-server.js';
 
 //setInterval((-> logger.info("[Memory Usage] #{Math.round(process.memoryUsage().rss / 1024 / 1024 * 100) / 100} MB")), 5000)
 

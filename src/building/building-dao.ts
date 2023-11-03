@@ -1,9 +1,9 @@
-import ModelEventClient from '../core/events/model-event-client';
-import Utils from '../utils/utils';
+import ModelEventClient from '../core/events/model-event-client.js';
+import Utils from '../utils/utils.js';
 
-import Building from './building';
-import BuildingLabor from './building-labor';
-import BuildingProduct from './building-product';
+import Building from './building.js';
+import BuildingLabor from './building-labor.js';
+import BuildingProduct from './building-product.js';
 
 export function asBuildingDao (client: ModelEventClient, planetId: string): BuildingDao {
   return {

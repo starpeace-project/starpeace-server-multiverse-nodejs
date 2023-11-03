@@ -1,6 +1,6 @@
-import Company from '../company/company';
-import CompanyDao from './company-dao';
-import Utils from '../utils/utils';
+import Company from '../company/company.js';
+import type CompanyDao from './company-dao.js';
+import Utils from '../utils/utils.js';
 
 export default class CompanyCache {
   dao: CompanyDao;

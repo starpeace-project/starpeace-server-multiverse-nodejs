@@ -1,8 +1,8 @@
 import _ from 'lodash';
-import * as sqlite3 from 'sqlite3';
+import sqlite3 from 'sqlite3';
 
-import RankingsDao from './rankings-dao';
-import Rankings from './rankings';
+import type RankingsDao from './rankings-dao.js';
+import Rankings from './rankings.js';
 
 
 export default class RankingsStore implements RankingsDao {

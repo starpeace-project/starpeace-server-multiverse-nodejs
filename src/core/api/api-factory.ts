@@ -1,7 +1,7 @@
 import express from 'express';
 import http from 'http';
 import Cors from 'cors';
-import * as bodyParser from 'body-parser';
+import bodyParser from 'body-parser';
 import compression from 'compression';
 import passport from 'passport';
 
@@ -12,31 +12,30 @@ import 'winston-daily-rotate-file';
 import { Strategy as LocalStrategy } from 'passport-local';
 import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
 
-import BuildingApi from './building-api';
-import CompanyApi from './company-api';
-import CorporationApi from './corporation-api';
-import GalaxyApi from './galaxy-api';
-import MetadataApi from './metadata-api';
-import PlanetApi from './planet-api';
-import TycoonApi from './tycoon-api';
+import BuildingApi from './building-api.js';
+import CompanyApi from './company-api.js';
+import CorporationApi from './corporation-api.js';
+import GalaxyApi from './galaxy-api.js';
+import MetadataApi from './metadata-api.js';
+import PlanetApi from './planet-api.js';
+import TycoonApi from './tycoon-api.js';
 
-import GalaxyManager from '../galaxy-manager';
-import ModelEventClient from '../events/model-event-client';
-import { HttpServerCaches } from '../http-server';
-import CacheByPlanet from '../../planet/cache-by-planet';
+import GalaxyManager from '../galaxy-manager.js';
+import ModelEventClient from '../events/model-event-client.js';
+import { type HttpServerCaches } from '../http-server.js';
+import CacheByPlanet from '../../planet/cache-by-planet.js';
 
-import BuildingCache from '../../building/building-cache';
-import CompanyCache from '../../company/company-cache';
-import CorporationCache from '../../corporation/corporation-cache';
-import InventionSummaryCache from '../../company/invention-summary-cache';
-import PlanetCache from '../../planet/planet-cache';
-import RankingsCache from '../../corporation/rankings-cache';
-import TownCache from '../../planet/town-cache';
-import TycoonCache from '../../tycoon/tycoon-cache';
-import TycoonManager from '../../tycoon/tycoon-manager';
-import TycoonVisaCache from '../../tycoon/tycoon-visa-cache';
-import MapCache from '../../planet/map-cache';
-
+import BuildingCache from '../../building/building-cache.js';
+import CompanyCache from '../../company/company-cache.js';
+import CorporationCache from '../../corporation/corporation-cache.js';
+import InventionSummaryCache from '../../company/invention-summary-cache.js';
+import PlanetCache from '../../planet/planet-cache.js';
+import RankingsCache from '../../corporation/rankings-cache.js';
+import TownCache from '../../planet/town-cache.js';
+import TycoonCache from '../../tycoon/tycoon-cache.js';
+import TycoonManager from '../../tycoon/tycoon-manager.js';
+import TycoonVisaCache from '../../tycoon/tycoon-visa-cache.js';
+import MapCache from '../../planet/map-cache.js';
 
 const DEFAULT_TIMEOUT_IN_MS = 10 * 1000;
 

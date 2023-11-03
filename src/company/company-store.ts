@@ -1,8 +1,8 @@
 import _ from 'lodash';
-import * as sqlite3 from 'sqlite3';
+import sqlite3 from 'sqlite3';
 
-import Company from '../company/company';
-import CompanyDao from './company-dao';
+import Company from '../company/company.js';
+import type CompanyDao from './company-dao.js';
 
 
 export default class CompanyStore implements CompanyDao {

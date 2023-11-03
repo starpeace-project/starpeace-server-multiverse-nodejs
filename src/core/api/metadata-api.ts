@@ -1,7 +1,7 @@
 import express from 'express';
 import winston from 'winston';
 
-import GalaxyManager, { BuildingConfigurations, CoreConfigurations, InventionConfigurations } from '../galaxy-manager';
+import GalaxyManager, { BuildingConfigurations, CoreConfigurations, InventionConfigurations } from '../galaxy-manager.js';
 
 
 export default class MetadataApi {

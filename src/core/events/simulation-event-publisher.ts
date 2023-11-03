@@ -1,7 +1,7 @@
 import winston from 'winston';
 import { Publisher } from 'zeromq';
 
-import SimulationFrame from '../../engine/simulation-frame';
+import SimulationFrame from '../../engine/simulation-frame.js';
 
 const SUBSCRIBE_PORT = 19170;
 

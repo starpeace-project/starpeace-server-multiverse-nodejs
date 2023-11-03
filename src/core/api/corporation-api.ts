@@ -4,25 +4,25 @@ import Filter from 'bad-words';
 import { DateTime } from 'luxon';
 import winston from 'winston';
 
-import GalaxyManager, { CoreConfigurations, PlanetMetadata } from '../galaxy-manager';
-import ModelEventClient from '../events/model-event-client';
-import { ApiCaches } from './api-factory';
+import GalaxyManager, { CoreConfigurations, type PlanetMetadata } from '../galaxy-manager.js';
+import ModelEventClient from '../events/model-event-client.js';
+import { type ApiCaches } from './api-factory.js';
 
-import Bookmark from '../../corporation/bookmark';
-import Company from '../../company/company';
-import Corporation from '../../corporation/corporation';
-import Mail from '../../corporation/mail';
-import MailEntity from '../../corporation/mail-entity';
-import Tycoon from '../../tycoon/tycoon';
+import Bookmark from '../../corporation/bookmark.js';
+import Company from '../../company/company.js';
+import Corporation from '../../corporation/corporation.js';
+import Mail from '../../corporation/mail.js';
+import MailEntity from '../../corporation/mail-entity.js';
+import Tycoon from '../../tycoon/tycoon.js';
 
-import Utils from '../../utils/utils';
-import CompanyCache from '../../company/company-cache';
-import PlanetCache from '../../planet/planet-cache';
-import CorporationRanking from '../../corporation/corporation-ranking';
-import CorporationPrestigeHistory from '../../corporation/corporation-prestige-history';
-import CorporationStrategy from '../../corporation/corporation-strategy';
-import CorporationLoanOffer from '../../corporation/corporation-loan-offer';
-import CorporationLoanPayment from '../../corporation/corporation-loan-payment';
+import Utils from '../../utils/utils.js';
+import CompanyCache from '../../company/company-cache.js';
+import PlanetCache from '../../planet/planet-cache.js';
+import CorporationRanking from '../../corporation/corporation-ranking.js';
+import CorporationPrestigeHistory from '../../corporation/corporation-prestige-history.js';
+import CorporationStrategy from '../../corporation/corporation-strategy.js';
+import CorporationLoanOffer from '../../corporation/corporation-loan-offer.js';
+import CorporationLoanPayment from '../../corporation/corporation-loan-payment.js';
 
 export default class CorporationApi {
   logger: winston.Logger;

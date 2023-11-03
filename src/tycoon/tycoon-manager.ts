@@ -1,12 +1,12 @@
 import { hash, compare } from 'bcrypt';
 import Filter from 'bad-words';
 
-import ModelEventClient from '../core/events/model-event-client';
+import ModelEventClient from '../core/events/model-event-client.js';
 
-import Tycoon from '../tycoon/tycoon';
-import TycoonCache from '../tycoon/tycoon-cache';
+import Tycoon from '../tycoon/tycoon.js';
+import TycoonCache from '../tycoon/tycoon-cache.js';
 
-import Utils from '../utils/utils';
+import Utils from '../utils/utils.js';
 
 
 export default class TycoonManager {

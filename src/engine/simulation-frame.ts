@@ -1,5 +1,5 @@
 
-import Planet from '../planet/planet';
+import Planet from '../planet/planet.js';
 
 export class SimulationCorporationFinances {
   cash: number = 0;

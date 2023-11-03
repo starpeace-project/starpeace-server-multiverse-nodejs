@@ -1,15 +1,19 @@
 import _ from 'lodash';
 import fs from 'fs-extra';
-import path from 'path';
+import path, { dirname } from 'path';
+import { fileURLToPath } from 'url';
 import winston from 'winston';
 
 import { BuildingDefinition, BuildingImageDefinition, CityZone, CompanySeal, IndustryCategory, IndustryType, InventionDefinition, Level, ResourceType, ResourceUnit, SimulationDefinition, SimulationDefinitionParser } from '@starpeace/starpeace-assets-types';
 
-import Logger from './utils/logger';
-import FileUtils from './utils/file-utils';
-import Utils from './utils/utils';
-import SetupPlanet from './setup/setup-planet';
-import { GalaxyMetadata, PlanetMetadata } from './core/galaxy-manager';
+import Logger from './utils/logger.js';
+import FileUtils from './utils/file-utils.js';
+import Utils from './utils/utils.js';
+import SetupPlanet from './setup/setup-planet.js';
+import { type GalaxyMetadata, type PlanetMetadata } from './core/galaxy-manager.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 
 export interface SetupBuildingConfigurations {

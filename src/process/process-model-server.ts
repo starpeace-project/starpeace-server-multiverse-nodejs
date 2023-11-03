@@ -1,33 +1,33 @@
 import winston from 'winston';
 
-import GalaxyManager, { BuildingConfigurations, InventionConfigurations } from '../core/galaxy-manager';
-import ModelEventServer from '../core/events/model-event-server';
-import SimulationEventSubscriber from '../core/events/simulation-event-subscriber';
-import SimulationFrame from '../engine/simulation-frame';
-import Logger from '../utils/logger';
+import GalaxyManager, { BuildingConfigurations, InventionConfigurations } from '../core/galaxy-manager.js';
+import ModelEventServer from '../core/events/model-event-server.js';
+import SimulationEventSubscriber from '../core/events/simulation-event-subscriber.js';
+import SimulationFrame from '../engine/simulation-frame.js';
+import Logger from '../utils/logger.js';
 
-import TycoonCache from '../tycoon/tycoon-cache';
-import TycoonStore from '../tycoon/tycoon-store';
-import TycoonTokenStore from '../tycoon/tycoon-token-store';
-import TycoonVisaCache from '../tycoon/tycoon-visa-cache';
+import TycoonCache from '../tycoon/tycoon-cache.js';
+import TycoonStore from '../tycoon/tycoon-store.js';
+import TycoonTokenStore from '../tycoon/tycoon-token-store.js';
+import TycoonVisaCache from '../tycoon/tycoon-visa-cache.js';
 
-import BuildingCache from '../building/building-cache';
-import BuildingStore from '../building/building-store';
-import BookmarkStore from '../corporation/bookmark-store';
-import CacheByPlanet from '../planet/cache-by-planet';
-import CompanyCache from '../company/company-cache';
-import CompanyStore from '../company/company-store';
-import CorporationCache from '../corporation/corporation-cache';
-import CorporationStore from '../corporation/corporation-store';
-import InventionSummaryCache from '../company/invention-summary-cache';
-import InventionSummaryStore from '../company/invention-summary-store';
-import MailStore from '../corporation/mail-store';
-import PlanetCache from '../planet/planet-cache';
-import PlanetStore from '../planet/planet-store';
-import RankingsCache from '../corporation/rankings-cache';
-import RankingsStore from '../corporation/rankings-store';
-import TownCache from '../planet/town-cache';
-import TownStore from '../planet/town-store';
+import BuildingCache from '../building/building-cache.js';
+import BuildingStore from '../building/building-store.js';
+import BookmarkStore from '../corporation/bookmark-store.js';
+import CacheByPlanet from '../planet/cache-by-planet.js';
+import CompanyCache from '../company/company-cache.js';
+import CompanyStore from '../company/company-store.js';
+import CorporationCache from '../corporation/corporation-cache.js';
+import CorporationStore from '../corporation/corporation-store.js';
+import InventionSummaryCache from '../company/invention-summary-cache.js';
+import InventionSummaryStore from '../company/invention-summary-store.js';
+import MailStore from '../corporation/mail-store.js';
+import PlanetCache from '../planet/planet-cache.js';
+import PlanetStore from '../planet/planet-store.js';
+import RankingsCache from '../corporation/rankings-cache.js';
+import RankingsStore from '../corporation/rankings-store.js';
+import TownCache from '../planet/town-cache.js';
+import TownStore from '../planet/town-store.js';
 
 
 const logger: winston.Logger = Logger.createProcessLoggerModelServer();

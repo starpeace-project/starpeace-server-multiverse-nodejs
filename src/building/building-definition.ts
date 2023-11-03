@@ -1,4 +1,4 @@
-import Translation from '../language/translation';
+import Translation from '../language/translation.js';
 
 export default class BuildingDefinition {
   id: string;

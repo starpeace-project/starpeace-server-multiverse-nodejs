@@ -1,8 +1,8 @@
 import _ from 'lodash';
 import fs from 'fs';
+import winston from 'winston';
 
 import { BuildingDefinition, BuildingImageDefinition, CityZone, CompanySeal, IndustryCategory, IndustryType, InventionDefinition, Level, ResourceType, ResourceUnit, SimulationDefinition, SimulationDefinitionParser } from '@starpeace/starpeace-assets-types';
-import winston from 'winston';
 
 
 export interface GalaxyMetadata {

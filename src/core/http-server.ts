@@ -1,41 +1,41 @@
 import _ from 'lodash';
 import http from 'http';
-import socketio from 'socket.io';
+import { Server as ioServer } from 'socket.io';
 import winston from 'winston';
 
-import ModelEventClient from './events/model-event-client';
-import ModelEventPublisher from './events/model-event-publisher';
-import ModelEventSubscriber from './events/model-event-subscriber';
-import SimulationEventSubscriber from './events/simulation-event-subscriber';
+import ModelEventClient from './events/model-event-client.js';
+import ModelEventPublisher from './events/model-event-publisher.js';
+import ModelEventSubscriber from './events/model-event-subscriber.js';
+import SimulationEventSubscriber from './events/simulation-event-subscriber.js';
 
-import ApiFactory from './api/api-factory';
-import BusFactory from './bus/bus-factory';
-import ConnectionManager from './connection-manager';
-import GalaxyManager, { BuildingConfigurations, InventionConfigurations } from './galaxy-manager';
-import CacheByPlanet from '../planet/cache-by-planet';
+import ApiFactory from './api/api-factory.js';
+import BusFactory from './bus/bus-factory.js';
+import ConnectionManager from './connection-manager.js';
+import GalaxyManager, { BuildingConfigurations, InventionConfigurations } from './galaxy-manager.js';
+import CacheByPlanet from '../planet/cache-by-planet.js';
 
-import TycoonCache from '../tycoon/tycoon-cache';
-import TycoonSocketCache from '../tycoon/tycoon-socket-cache';
-import { asTycoonDao } from '../tycoon/tycoon-dao';
+import TycoonCache from '../tycoon/tycoon-cache.js';
+import TycoonSocketCache from '../tycoon/tycoon-socket-cache.js';
+import { asTycoonDao } from '../tycoon/tycoon-dao.js';
 
-import BuildingCache from '../building/building-cache';
-import { asBuildingDao } from '../building/building-dao';
-import CorporationCache from '../corporation/corporation-cache';
-import { asCorporationDao } from '../corporation/corporation-dao';
-import CompanyCache from '../company/company-cache';
-import { asCompanyDao } from '../company/company-dao';
-import InventionSummaryCache from '../company/invention-summary-cache';
-import { asInventionSummaryDao } from '../company/invention-summary-dao';
-import PlanetCache from '../planet/planet-cache';
-import { asPlanetDao } from '../planet/planet-dao';
-import RankingsCache from '../corporation/rankings-cache';
-import { asRankingsDao } from '../corporation/rankings-dao';
-import TownCache from '../planet/town-cache';
-import { asTownDao } from '../planet/town-dao';
-import TycoonVisaCache from '../tycoon/tycoon-visa-cache';
-import { asTycoonVisaDao } from '../tycoon/tycoon-visa-dao';
-import SimulationFrame from '../engine/simulation-frame';
-import MapCache from '../planet/map-cache';
+import BuildingCache from '../building/building-cache.js';
+import { asBuildingDao } from '../building/building-dao.js';
+import CorporationCache from '../corporation/corporation-cache.js';
+import { asCorporationDao } from '../corporation/corporation-dao.js';
+import CompanyCache from '../company/company-cache.js';
+import { asCompanyDao } from '../company/company-dao.js';
+import InventionSummaryCache from '../company/invention-summary-cache.js';
+import { asInventionSummaryDao } from '../company/invention-summary-dao.js';
+import PlanetCache from '../planet/planet-cache.js';
+import { asPlanetDao } from '../planet/planet-dao.js';
+import RankingsCache from '../corporation/rankings-cache.js';
+import { asRankingsDao } from '../corporation/rankings-dao.js';
+import TownCache from '../planet/town-cache.js';
+import { asTownDao } from '../planet/town-dao.js';
+import TycoonVisaCache from '../tycoon/tycoon-visa-cache.js';
+import { asTycoonVisaDao } from '../tycoon/tycoon-visa-dao.js';
+import SimulationFrame from '../engine/simulation-frame.js';
+import MapCache from '../planet/map-cache.js';
 
 
 export interface HttpServerCaches {
@@ -69,7 +69,7 @@ export default class HttpServer {
   connectionManager: ConnectionManager;
 
   server: http.Server;
-  io: socketio.Server;
+  io: ioServer;
 
 
   constructor () {

@@ -1,6 +1,6 @@
 import _ from 'lodash';
 
-import ConstructionQuantity from './construction-quantity';
+import ConstructionQuantity from './construction-quantity.js';
 
 export default class SimulationDefinition {
   id: string;

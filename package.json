@@ -1,6 +1,6 @@
 {
   "name": "@starpeace/starpeace-server-multiverse-nodejs",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "STARPEACE Multiverse game-play and simulation server created with NodeJS",
   "author": "starpeace-project",
   "license": "MIT",
@@ -8,7 +8,7 @@
     "type": "git",
     "url": "git://github.com/starpeace-project/starpeace-server-multiverse-nodejs.git"
   },
-  "type": "commonjs",
+  "type": "module",
   "pkg": {
     "scripts": [
       "dist/**/*.js",
@@ -23,8 +23,9 @@
     "galaxy-server": "dist/galaxy-server.js"
   },
   "scripts": {
-    "build": "grunt && tsc -p tsconfig.json",
-    "test": "npm run build && mocha"
+    "lines-of-code": "cloc ./src",
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && vitest --run --dir tst"
   },
   "devDependencies": {
     "@babel/core": "^7.23.2",
@@ -39,9 +40,8 @@
     "@types/inquirer": "^9.0.6",
     "@types/lodash": "^4.14.200",
     "@types/luxon": "^3.3.3",
-    "@types/mocha": "^10.0.3",
     "@types/morgan": "^1.9.7",
-    "@types/node": "^20.8.9",
+    "@types/node": "^20.8.10",
     "@types/passport": "^1.0.14",
     "@types/passport-jwt": "^3.0.12",
     "@types/passport-local": "^1.0.37",
@@ -53,12 +53,12 @@
     "grunt-contrib-clean": "^2.0.1",
     "grunt-contrib-copy": "^1.0.0",
     "matchdep": "*",
-    "mocha": "^10.2.0",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "vitest": "^0.34.6"
   },
   "dependencies": {
     "@starpeace/starpeace-assets": "github:starpeace-project/starpeace-assets.git#v0.2.26",
-    "@starpeace/starpeace-assets-types": "github:starpeace-project/starpeace-assets-types.git#v0.3.8",
+    "@starpeace/starpeace-assets-types": "github:starpeace-project/starpeace-assets-types.git#v0.3.9",
     "bad-words": "^3.0.4",
     "bcrypt": "^5.1.1",
     "bmp-js": "^0.1.0",
@@ -75,7 +75,7 @@
     "lodash": "^4.17.21",
     "luxon": "^3.4.3",
     "memorystore": "^1.6.7",
-    "p-queue": "npm:@esm2cjs/p-queue@^7.3.0",
+    "p-queue": "^7.4.1",
     "passport": "^0.6.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",

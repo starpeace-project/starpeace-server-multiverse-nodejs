@@ -4,15 +4,13 @@
     "target": "es2020",
     "outDir": "dist/app",
     "rootDir": "src",
-    "moduleResolution": "node",
-    "module": "commonjs",
-    "declaration": true,
-    "inlineSourceMap": true,
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+
     "esModuleInterop": true /* Enables emit interoperability between CommonJS and ES Modules via creation of namespace objects for all imports. Implies 'allowSyntheticDefaultImports'. */,
     "resolveJsonModule": true /* Include modules imported with .json extension. */,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-
     "strict": true /* Enable all strict type-checking options. */,
 
     /* Strict Type-Checking Options */
@@ -38,17 +36,18 @@
     "preserveConstEnums": true,
     "removeComments": true,
     "sourceMap": false,
+    "inlineSourceMap": true,
 
     /* Experimental Options */
     // "experimentalDecorators": true /* Enables experimental support for ES7 decorators. */,
     // "emitDecoratorMetadata": true /* Enables experimental support for emitting type metadata for decorators. */,
 
     "lib": ["es2020"],
-    "types": ["node", "mocha"],
+    "types": ["node"],
     "typeRoots": ["node_modules/@types", "src/types"]
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules/**", "tst/**"],
+  "exclude": ["node_modules/**"],
   "compileOnSave": false
 }
 

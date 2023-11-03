@@ -1,7 +1,7 @@
-import ModelEventClient from '../core/events/model-event-client';
-import Utils from '../utils/utils';
+import ModelEventClient from '../core/events/model-event-client.js';
+import Utils from '../utils/utils.js';
 
-import Corporation from '../corporation/corporation';
+import Corporation from '../corporation/corporation.js';
 
 export function asCorporationDao (client: ModelEventClient, planetId: string): CorporationDao {
   return {

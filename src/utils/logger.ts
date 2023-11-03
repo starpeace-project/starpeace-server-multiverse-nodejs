@@ -1,7 +1,7 @@
 import winston from 'winston';
 import 'winston-daily-rotate-file';
 
-const VERSION = require('../../../package.json')?.version || "0.1.0";
+const VERSION = process.env.VERSION ?? "0.1.0";
 
 export default class Logger {
 

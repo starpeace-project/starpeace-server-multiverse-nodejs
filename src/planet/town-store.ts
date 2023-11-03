@@ -1,8 +1,8 @@
 import _ from 'lodash';
-import * as sqlite3 from 'sqlite3';
+import sqlite3 from 'sqlite3';
 
-import Town from '../planet/town';
-import TownDao from './town-dao';
+import Town from '../planet/town.js';
+import type TownDao from './town-dao.js';
 
 
 export default class TownStore implements TownDao {

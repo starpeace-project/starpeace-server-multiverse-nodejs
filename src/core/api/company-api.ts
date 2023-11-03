@@ -3,15 +3,15 @@ import express from 'express';
 import Filter from 'bad-words';
 import winston from 'winston';
 
-import GalaxyManager from '../galaxy-manager';
-import ModelEventClient from '../events/model-event-client';
-import { ApiCaches } from './api-factory';
+import GalaxyManager from '../galaxy-manager.js';
+import ModelEventClient from '../events/model-event-client.js';
+import { type ApiCaches } from './api-factory.js';
 
-import Building from '../../building/building';
-import Company from '../../company/company';
-import CompanyCache from '../../company/company-cache';
-import InventionSummary from '../../company/invention-summary';
-import Town from '../../planet/town';
+import Building from '../../building/building.js';
+import Company from '../../company/company.js';
+import CompanyCache from '../../company/company-cache.js';
+import InventionSummary from '../../company/invention-summary.js';
+import Town from '../../planet/town.js';
 
 
 export default class CompanyApi {

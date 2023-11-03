@@ -1,8 +1,8 @@
 import _ from 'lodash';
 import { DateTime } from 'luxon';
 
-import Company from '../company/company';
-import Utils from '../utils/utils';
+import Company from '../company/company.js';
+import Utils from '../utils/utils.js';
 
 
 export default class Corporation {

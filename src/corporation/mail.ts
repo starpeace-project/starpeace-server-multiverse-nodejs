@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import { DateTime } from 'luxon';
 
-import MailEntity from '../corporation/mail-entity';
+import MailEntity from '../corporation/mail-entity.js';
 
 
 export default class Mail {

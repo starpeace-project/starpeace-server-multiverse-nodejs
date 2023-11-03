@@ -2,11 +2,15 @@ import _ from 'lodash';
 import cluster, { Worker } from 'cluster';
 import { fork } from 'child_process';
 import os from 'os';
-import path from 'path';
-
-import GalaxyManager from '../core/galaxy-manager';
-import Logger from '../utils/logger';
+import path, { dirname } from 'path';
+import { fileURLToPath } from 'url';
 import winston from 'winston';
+
+import GalaxyManager from '../core/galaxy-manager.js';
+import Logger from '../utils/logger.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 interface Processes {
   simulation?: any;

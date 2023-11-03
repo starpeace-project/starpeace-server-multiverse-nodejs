@@ -1,4 +1,4 @@
-import Utils from "../utils/utils";
+import Utils from "../utils/utils.js";
 
 export default class Company {
   id: string;

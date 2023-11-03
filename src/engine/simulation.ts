@@ -1,27 +1,28 @@
-import { TaskTimer } from 'tasktimer';
+import tasktimer from 'tasktimer';
 import winston from 'winston';
 
-import SimulationEventPublisher from '../core/events/simulation-event-publisher';
-import SimulationFrame, { SimulationActiveResearch, SimulationCorporationFinances, SimulationFinancesFrame, SimulationResearchFrame } from './simulation-frame';
-import Logger from '../utils/logger';
-
-import CompanyCache from '../company/company-cache';
-import CorporationCache from '../corporation/corporation-cache';
-import InventionSummaryCache from '../company/invention-summary-cache';
-import Planet from '../planet/planet';
-import PlanetCache from '../planet/planet-cache';
-import TownCache from '../planet/town-cache';
-import Corporation from '../corporation/corporation';
-import Town from '../planet/town';
-import Building from '../building/building';
-import Company from '../company/company';
-import TycoonCache from '../tycoon/tycoon-cache';
-import BuildingCache from '../building/building-cache';
-import RankingsCache from '../corporation/rankings-cache';
-import SimulationContext from './simulation-context';
-import InventionSummary from '../company/invention-summary';
 import { InventionDefinition } from '@starpeace/starpeace-assets-types';
-import { BuildingConfigurations, InventionConfigurations } from '../core/galaxy-manager';
+
+import SimulationEventPublisher from '../core/events/simulation-event-publisher.js';
+import SimulationFrame, { SimulationActiveResearch, SimulationCorporationFinances, SimulationFinancesFrame, SimulationResearchFrame } from './simulation-frame.js';
+import Logger from '../utils/logger.js';
+
+import CompanyCache from '../company/company-cache.js';
+import CorporationCache from '../corporation/corporation-cache.js';
+import InventionSummaryCache from '../company/invention-summary-cache.js';
+import Planet from '../planet/planet.js';
+import PlanetCache from '../planet/planet-cache.js';
+import TownCache from '../planet/town-cache.js';
+import Corporation from '../corporation/corporation.js';
+import Town from '../planet/town.js';
+import Building from '../building/building.js';
+import Company from '../company/company.js';
+import TycoonCache from '../tycoon/tycoon-cache.js';
+import BuildingCache from '../building/building-cache.js';
+import RankingsCache from '../corporation/rankings-cache.js';
+import SimulationContext from './simulation-context.js';
+import InventionSummary from '../company/invention-summary.js';
+import { BuildingConfigurations, InventionConfigurations } from '../core/galaxy-manager.js';
 
 
 const FRAME_DURATION_MS = 500;
@@ -40,7 +41,7 @@ export interface SimulationCaches {
 export default class Simulation {
   logger: winston.Logger;
   simulationLogger: winston.Logger;
-  timer: TaskTimer;
+  timer: tasktimer.TaskTimer;
   eventPublisher: SimulationEventPublisher;
 
   planetId: string;
@@ -60,9 +61,9 @@ export default class Simulation {
     this.caches = caches;
     this.context = context;
 
-    this.timer = new TaskTimer(FRAME_DURATION_MS);
-    this.timer.on(TaskTimer.Event.TICK, () => this.mainLoop());
-    this.timer.on(TaskTimer.Event.STOPPED, () => this.logger.info('Engine stopped'));
+    this.timer = new tasktimer.TaskTimer(FRAME_DURATION_MS);
+    this.timer.on(tasktimer.TaskTimer.Event.TICK, () => this.mainLoop());
+    this.timer.on(tasktimer.TaskTimer.Event.STOPPED, () => this.logger.info('Engine stopped'));
 
     this.simulationLogger = Logger.createSimulationLogger();
   }

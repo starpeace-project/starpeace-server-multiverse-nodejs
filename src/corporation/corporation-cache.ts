@@ -1,7 +1,7 @@
-import Corporation from '../corporation/corporation';
-import CorporationDao from './corporation-dao';
-import { SimulationCorporationFinances } from '../engine/simulation-frame';
-import Utils from '../utils/utils';
+import Corporation from '../corporation/corporation.js';
+import type CorporationDao from './corporation-dao.js';
+import { SimulationCorporationFinances } from '../engine/simulation-frame.js';
+import Utils from '../utils/utils.js';
 
 export default class CorporationCache {
   dao: CorporationDao;

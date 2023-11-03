@@ -2,14 +2,14 @@ import _ from 'lodash';
 import express from 'express';
 import winston from 'winston';
 
-import GalaxyManager from '../galaxy-manager';
-import ModelEventClient from '../events/model-event-client';
-import { ApiCaches } from './api-factory';
+import GalaxyManager from '../galaxy-manager.js';
+import ModelEventClient from '../events/model-event-client.js';
+import { type ApiCaches } from './api-factory.js';
 
-import Corporation from '../../corporation/corporation';
-import Tycoon from '../../tycoon/tycoon';
-import CorporationCache from '../../corporation/corporation-cache';
-import CorporationIdentifier from '../../corporation/corporation-identifier';
+import Corporation from '../../corporation/corporation.js';
+import Tycoon from '../../tycoon/tycoon.js';
+import CorporationCache from '../../corporation/corporation-cache.js';
+import CorporationIdentifier from '../../corporation/corporation-identifier.js';
 
 export default class TycoonApi {
   logger: winston.Logger;

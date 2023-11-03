@@ -1,7 +1,7 @@
-import ModelEventClient from '../core/events/model-event-client';
-import Utils from '../utils/utils';
+import ModelEventClient from '../core/events/model-event-client.js';
+import Utils from '../utils/utils.js';
 
-import Rankings from '../corporation/rankings';
+import Rankings from '../corporation/rankings.js';
 
 export function asRankingsDao (client: ModelEventClient, planetId: string): RankingsDao {
   return {

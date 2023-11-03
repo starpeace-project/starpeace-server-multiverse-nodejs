@@ -1,10 +1,10 @@
 import _ from 'lodash';
-
-import Planet from './planet';
-import PlanetDao from './planet-dao';
-
-import Utils from '../utils/utils';
 import { DateTime } from 'luxon';
+
+import Planet from './planet.js';
+import type PlanetDao from './planet-dao.js';
+
+import Utils from '../utils/utils.js';
 
 export default class PlanetCache {
   dao: PlanetDao;

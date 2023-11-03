@@ -1,11 +1,11 @@
 import bmp from 'bmp-js';
 import fs from 'fs-extra';
 
-import { PlanetMetadata } from '../core/galaxy-manager';
+import { type PlanetMetadata } from '../core/galaxy-manager.js';
 
-import Town from '../planet/town';
-import Utils from '../utils/utils';
-import TownCache from './town-cache';
+import Town from '../planet/town.js';
+import Utils from '../utils/utils.js';
+import TownCache from './town-cache.js';
 
 export default class MapCache {
   planetMetadata: PlanetMetadata;

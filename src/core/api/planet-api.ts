@@ -1,18 +1,18 @@
 import express from 'express';
 import winston from 'winston';
 
-import GalaxyManager, { PlanetMetadata } from '../galaxy-manager';
-import ModelEventClient from '../events/model-event-client';
-import { ApiCaches } from './api-factory';
+import GalaxyManager, { type PlanetMetadata } from '../galaxy-manager.js';
+import ModelEventClient from '../events/model-event-client.js';
+import { type ApiCaches } from './api-factory.js';
 
-import Corporation from '../../corporation/corporation';
-import Rankings from '../../corporation/rankings';
-import Tycoon from '../../tycoon/tycoon';
-import TycoonVisa, { VISA_IDLE_EXPIRATION_IN_MS } from '../../tycoon/tycoon-visa';
-import Town from '../../planet/town';
+import Corporation from '../../corporation/corporation.js';
+import Rankings from '../../corporation/rankings.js';
+import Tycoon from '../../tycoon/tycoon.js';
+import TycoonVisa, { VISA_IDLE_EXPIRATION_IN_MS } from '../../tycoon/tycoon-visa.js';
+import Town from '../../planet/town.js';
 
-import Utils from '../../utils/utils';
-import CorporationCache from '../../corporation/corporation-cache';
+import Utils from '../../utils/utils.js';
+import CorporationCache from '../../corporation/corporation-cache.js';
 
 
 export default class PlanetApi {
@@ -128,13 +128,9 @@ export default class PlanetApi {
       if (!req.planet || !req.params.townId) return res.status(400);
 
       try {
-        console.log('get town details', 1, req.params.townId);
-        console.log(this.caches.town.withPlanet(req.planet).byId);
         const town: Town | null = this.caches.town.withPlanet(req.planet).forId(req.params.townId);
-        console.log('get town details', 2, town);
         if (!town) return res.status(404);
 
-        console.log('get town details', 3);
         // FIXME: TODO: hookup details
         return res.json({
           id: req.params.townId,

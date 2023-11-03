@@ -1,16 +1,16 @@
-import { Socket } from 'net';
-import socketio from 'socket.io';
+import { Socket as netSocket } from 'net';
+import { Server, Socket as ioSocket } from 'socket.io';
 import winston from 'winston';
 
 export class ConnectionInformation {
   disconnectableSocketIds: Array<string> = [];
-  connectedSocketsByTycoonIds: Record<string, socketio.Socket> = {};
+  connectedSocketsByTycoonIds: Record<string, ioSocket> = {};
 }
 
 export class ConnectionState {
   running: boolean = false;
 
-  openConnectionsByRemoteKey: Record<string, Socket>;
+  openConnectionsByRemoteKey: Record<string, netSocket>;
   tycoonIdsByOpenSocketId: Record<string, string>;
 
 
@@ -19,7 +19,7 @@ export class ConnectionState {
     this.tycoonIdsByOpenSocketId = {};
   }
 
-  handleConnection (connection: Socket): void {
+  handleConnection (connection: netSocket): void {
     if (!this.running) {
       connection.destroy();
       return;
@@ -45,9 +45,9 @@ export class ConnectionState {
 export default class ConnectionManager {
   logger: winston.Logger
   state: ConnectionState;
-  io: socketio.Server;
+  io: Server;
 
-  constructor (logger: winston.Logger, io: socketio.Server) {
+  constructor (logger: winston.Logger, io: Server) {
     this.logger = logger;
     this.state = new ConnectionState();
     this.io = io;
@@ -71,7 +71,7 @@ export default class ConnectionManager {
     }
   }
 
-  handleConnection (connection: Socket): void {
+  handleConnection (connection: netSocket): void {
     if (!this.state.running) {
       connection.destroy();
       return;
@@ -87,7 +87,7 @@ export default class ConnectionManager {
   }
 
   disconnectSocket (socketId: string): void {
-    const socket: socketio.Socket | undefined = this.io.sockets.sockets.get(socketId);
+    const socket: ioSocket | undefined = this.io.sockets.sockets.get(socketId);
     if (socket) {
       this.logger.info(`[HTTP Worker] Forcefully disconnecting socket ${socketId}`);
       socket.disconnect(true);
@@ -101,7 +101,7 @@ export default class ConnectionManager {
   connectionInformation (): ConnectionInformation {
     const info = new ConnectionInformation();
     for (const [socketId, tycoonId] of Object.entries(this.state.tycoonIdsByOpenSocketId)) {
-      const socket: socketio.Socket | undefined = this.io.sockets.sockets.get(socketId);
+      const socket: ioSocket | undefined = this.io.sockets.sockets.get(socketId);
       if (!socket) {
         info.disconnectableSocketIds.push(socketId);
         continue;

@@ -1,6 +1,6 @@
-import Town from '../planet/town';
-import TownDao from '../planet/town-dao';
-import Utils from '../utils/utils';
+import Town from '../planet/town.js';
+import type TownDao from '../planet/town-dao.js';
+import Utils from '../utils/utils.js';
 
 export default class TownCache {
   dao: TownDao;

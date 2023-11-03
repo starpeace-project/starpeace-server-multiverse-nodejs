@@ -1,7 +1,7 @@
-import ModelEventClient from '../core/events/model-event-client';
-import Utils from '../utils/utils';
+import ModelEventClient from '../core/events/model-event-client.js';
+import Utils from '../utils/utils.js';
 
-import Planet from './planet';
+import Planet from './planet.js';
 
 
 export function asPlanetDao (client: ModelEventClient, planetId: string): PlanetDao {

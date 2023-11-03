@@ -1,5 +1,5 @@
-import { PlanetMetadata } from '../../core/galaxy-manager';
-import TycoonVisa from '../../tycoon/tycoon-visa';
+import { PlanetMetadata } from '../../core/galaxy-manager.js';
+import TycoonVisa from '../../tycoon/tycoon-visa.js';
 
 declare module 'express-serve-static-core' {
   interface Request {

@@ -1,8 +1,8 @@
-
-import assert from 'assert';
+import { expect, test } from 'vitest';
 
 import { BuildingImageDefinition } from '@starpeace/starpeace-assets-types';
-import SetupTowns from '../../src/setup/setup-towns';
+
+import SetupTowns from '../../src/setup/setup-towns.js';
 
 
 const configurations = {
@@ -26,41 +26,41 @@ const configurations = {
 const townhallImage = new BuildingImageDefinition('id', 'path', 3, 3, [], [], null);
 const buildingImage = new BuildingImageDefinition('id', 'path', 2, 2, [], [], null);
 
-describe('SetupTowns', () => {
-  describe('#planBuilding()', () => {
-    it('should plan building layout at same position', () => {
-      assert.deepEqual(new SetupTowns(configurations, 0).planBuilding(0, townhallImage, 0, buildingImage), [0, -3]);
-      assert.deepEqual(new SetupTowns(configurations, 1).planBuilding(0, townhallImage, 0, buildingImage), [-3, 0]);
+test('SetupTowns', () => {
+  test('#planBuilding()', () => {
+    test('should plan building layout at same position', () => {
+      expect(SetupTowns.planBuilding(0, 0, townhallImage, 0, buildingImage)).toBe([0, -3]);
+      expect(SetupTowns.planBuilding(1, 0, townhallImage, 0, buildingImage)).toBe([-3, 0]);
 
-      assert.deepEqual(new SetupTowns(configurations, 0).planBuilding(1, townhallImage, 1, buildingImage), [0, -3]);
-      assert.deepEqual(new SetupTowns(configurations, 1).planBuilding(1, townhallImage, 1, buildingImage), [2, 0]);
+      expect(SetupTowns.planBuilding(0, 1, townhallImage, 1, buildingImage)).toBe([0, -3]);
+      expect(SetupTowns.planBuilding(1, 1, townhallImage, 1, buildingImage)).toBe([2, 0]);
 
-      assert.deepEqual(new SetupTowns(configurations, 0).planBuilding(2, townhallImage, 2, buildingImage), [0, 2]);
-      assert.deepEqual(new SetupTowns(configurations, 1).planBuilding(2, townhallImage, 2, buildingImage), [2, 0]);
+      expect(SetupTowns.planBuilding(0, 2, townhallImage, 2, buildingImage)).toBe([0, 2]);
+      expect(SetupTowns.planBuilding(1, 2, townhallImage, 2, buildingImage)).toBe([2, 0]);
 
-      assert.deepEqual(new SetupTowns(configurations, 0).planBuilding(3, townhallImage, 3, buildingImage), [0, 2]);
-      assert.deepEqual(new SetupTowns(configurations, 1).planBuilding(3, townhallImage, 3, buildingImage), [-3, 0]);
+      expect(SetupTowns.planBuilding(0, 3, townhallImage, 3, buildingImage)).toBe([0, 2]);
+      expect(SetupTowns.planBuilding(1, 3, townhallImage, 3, buildingImage)).toBe([-3, 0]);
     });
 
-    it('should plan building layout at different x and same y position', () => {
-      assert.deepEqual(new SetupTowns(configurations, 0).planBuilding(0, townhallImage, 1, buildingImage), [3, 0]);
-      assert.deepEqual(new SetupTowns(configurations, 0).planBuilding(1, townhallImage, 0, buildingImage), [-4, 0]);
+    test('should plan building layout at different x and same y position', () => {
+      expect(SetupTowns.planBuilding(0, 0, townhallImage, 1, buildingImage)).toBe([3, 0]);
+      expect(SetupTowns.planBuilding(0, 1, townhallImage, 0, buildingImage)).toBe([-4, 0]);
 
-      assert.deepEqual(new SetupTowns(configurations, 0).planBuilding(3, townhallImage, 2, buildingImage), [3, 0]);
-      assert.deepEqual(new SetupTowns(configurations, 0).planBuilding(2, townhallImage, 3, buildingImage), [-4, 0]);
+      expect(SetupTowns.planBuilding(0, 3, townhallImage, 2, buildingImage)).toBe([3, 0]);
+      expect(SetupTowns.planBuilding(0, 2, townhallImage, 3, buildingImage)).toBe([-4, 0]);
     });
 
-    it('should plan building layout at same x and different y position', () => {
-      assert.deepEqual(new SetupTowns(configurations, 0).planBuilding(0, townhallImage, 3, buildingImage), [0, 3]);
-      assert.deepEqual(new SetupTowns(configurations, 0).planBuilding(3, townhallImage, 0, buildingImage), [0, -4]);
+    test('should plan building layout at same x and different y position', () => {
+      expect(SetupTowns.planBuilding(0, 0, townhallImage, 3, buildingImage)).toBe([0, 3]);
+      expect(SetupTowns.planBuilding(0, 3, townhallImage, 0, buildingImage)).toBe([0, -4]);
 
-      assert.deepEqual(new SetupTowns(configurations, 0).planBuilding(1, townhallImage, 2, buildingImage), [0, 3]);
-      assert.deepEqual(new SetupTowns(configurations, 0).planBuilding(2, townhallImage, 1, buildingImage), [0, -4]);
+      expect(SetupTowns.planBuilding(0, 1, townhallImage, 2, buildingImage)).toBe([0, 3]);
+      expect(SetupTowns.planBuilding(0, 2, townhallImage, 1, buildingImage)).toBe([0, -4]);
     });
 
-    it('should plan building layout at different x and different y position', () => {
-      assert.deepEqual(new SetupTowns(configurations, 0).planBuilding(0, townhallImage, 2, buildingImage), [3, 3]);
-      assert.deepEqual(new SetupTowns(configurations, 0).planBuilding(2, townhallImage, 0, buildingImage), [-4, -4]);
+    test('should plan building layout at different x and different y position', () => {
+      expect(SetupTowns.planBuilding(0, 0, townhallImage, 2, buildingImage)).toBe([3, 3]);
+      expect(SetupTowns.planBuilding(0, 2, townhallImage, 0, buildingImage)).toBe([-4, -4]);
     });
   });
 });

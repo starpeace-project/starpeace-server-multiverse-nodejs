@@ -3,20 +3,20 @@ import PQueue from 'p-queue';
 import winston from 'winston';
 import { Request } from 'zeromq';
 
-import Tycoon from '../../tycoon/tycoon';
-import TycoonVisa from '../../tycoon/tycoon-visa';
+import Tycoon from '../../tycoon/tycoon.js';
+import TycoonVisa from '../../tycoon/tycoon-visa.js';
 
-import Bookmark from '../../corporation/bookmark';
-import Building from '../../building/building';
-import BuildingLabor from '../../building/building-labor';
-import BuildingProduct from '../../building/building-product';
-import Company from '../../company/company';
-import Corporation from '../../corporation/corporation';
-import Mail from '../../corporation/mail';
-import Planet from '../../planet/planet';
-import Rankings from '../../corporation/rankings';
-import Town from '../../planet/town';
-import InventionSummary from '../../company/invention-summary';
+import Bookmark from '../../corporation/bookmark.js';
+import Building from '../../building/building.js';
+import BuildingLabor from '../../building/building-labor.js';
+import BuildingProduct from '../../building/building-product.js';
+import Company from '../../company/company.js';
+import Corporation from '../../corporation/corporation.js';
+import Mail from '../../corporation/mail.js';
+import Planet from '../../planet/planet.js';
+import Rankings from '../../corporation/rankings.js';
+import Town from '../../planet/town.js';
+import InventionSummary from '../../company/invention-summary.js';
 
 
 const SYNC_API_PORT = 19165;
@@ -191,12 +191,12 @@ export default class ModelEventClient {
     });
   }
   async getBuildingLabor (planetId: string, id: string): Promise<BuildingLabor | undefined> {
-    return await this.requestQueue.add(async () => {
+    return await (this.requestQueue.add(async () => {
       await this.requestSocket.send(JSON.stringify({ type: 'BUILDING_LABOR:GET', planetId: planetId, id: id }));
       const [result] = await this.requestSocket.receive();
       const json = JSON.parse(result.toString()).labor;
       return json ? BuildingLabor.fromJson(json) : undefined;
-    });
+    }) as Promise<BuildingLabor | undefined>);
   }
   async listBuildingProducts (planetId: string, buildingId: string): Promise<BuildingProduct[]> {
     return await this.requestQueue.add(async () => {
@@ -206,12 +206,12 @@ export default class ModelEventClient {
     });
   }
   async getBuildingProduct (planetId: string, id: string): Promise<BuildingProduct | undefined> {
-    return await this.requestQueue.add(async () => {
+    return await (this.requestQueue.add(async () => {
       await this.requestSocket.send(JSON.stringify({ type: 'BUILDING_PRODUCT:GET', planetId: planetId, id: id }));
       const [result] = await this.requestSocket.receive();
       const json = JSON.parse(result.toString()).product;
       return json ? BuildingProduct.fromJson(json) : undefined;
-    });
+    }) as Promise<BuildingProduct | undefined>);
   }
 
   async getCompanyInventionSummary (planetId: string, companyId: string): Promise<InventionSummary> {

@@ -1,10 +1,10 @@
 import { BuildingImageDefinition } from '@starpeace/starpeace-assets-types';
 
-import Building from '../building/building';
-import BuildingDao from '../building/building-dao';
-import { BuildingConfigurations } from '../core/galaxy-manager';
-import TownCache from '../planet/town-cache';
-import Utils from '../utils/utils';
+import Building from '../building/building.js';
+import type BuildingDao from '../building/building-dao.js';
+import { BuildingConfigurations } from '../core/galaxy-manager.js';
+import TownCache from '../planet/town-cache.js';
+import Utils from '../utils/utils.js';
 
 export default class BuildingCache {
   dao: BuildingDao;

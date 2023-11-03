@@ -1,6 +1,6 @@
-import TycoonVisa from "./tycoon-visa";
-import TycoonVisaDao from "./tycoon-visa-dao";
-import Utils from "../utils/utils";
+import TycoonVisa from "./tycoon-visa.js";
+import type TycoonVisaDao from "./tycoon-visa-dao.js";
+import Utils from "../utils/utils.js";
 
 export default class TycoonVisaCache {
   dao: TycoonVisaDao;

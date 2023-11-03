@@ -1,20 +1,20 @@
-import { GalaxyMetadata, PlanetMetadata } from "../core/galaxy-manager";
-import BookmarkStore from "../corporation/bookmark-store";
-import BuildingStore from "../building/building-store";
-import CompanyStore from "../company/company-store";
-import CorporationStore from "../corporation/corporation-store";
-import InventionSummaryStore from "../company/invention-summary-store";
-import MailStore from "../corporation/mail-store";
-import RankingsStore from "../corporation/rankings-store";
-import PlanetStore from "../planet/planet-store";
-import TownStore from "../planet/town-store";
-import TycoonStore from "../tycoon/tycoon-store";
-import TycoonTokenStore from "../tycoon/tycoon-token-store";
+import { type GalaxyMetadata, type PlanetMetadata } from "../core/galaxy-manager.js";
+import BookmarkStore from "../corporation/bookmark-store.js";
+import BuildingStore from "../building/building-store.js";
+import CompanyStore from "../company/company-store.js";
+import CorporationStore from "../corporation/corporation-store.js";
+import InventionSummaryStore from "../company/invention-summary-store.js";
+import MailStore from "../corporation/mail-store.js";
+import RankingsStore from "../corporation/rankings-store.js";
+import PlanetStore from "../planet/planet-store.js";
+import TownStore from "../planet/town-store.js";
+import TycoonStore from "../tycoon/tycoon-store.js";
+import TycoonTokenStore from "../tycoon/tycoon-token-store.js";
 
-import { SetupConfigurations } from "../setup";
-import SetupPlanetMetadata from "./setup-planet-metadata";
-import SetupSimulation from "./setup-simulation";
-import SetupTowns from "./setup-towns";
+import { type SetupConfigurations } from "../setup.js";
+import SetupPlanetMetadata from "./setup-planet-metadata.js";
+import SetupSimulation from "./setup-simulation.js";
+import SetupTowns from "./setup-towns.js";
 
 
 export interface SetupPlanetStores {

@@ -1,6 +1,6 @@
-import Tycoon from '../tycoon/tycoon';
-import TycoonDao from './tycoon-dao';
-import Utils from '../utils/utils';
+import Tycoon from '../tycoon/tycoon.js';
+import type TycoonDao from './tycoon-dao.js';
+import Utils from '../utils/utils.js';
 
 export default class TycoonCache {
   dao: TycoonDao;

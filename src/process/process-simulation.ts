@@ -1,31 +1,31 @@
 import winston from 'winston';
 import 'winston-daily-rotate-file';
 
-import GalaxyManager, { BuildingConfigurations, InventionConfigurations } from '../core/galaxy-manager';
-import Logger from '../utils/logger';
-import ModelEventClient from '../core/events/model-event-client';
-import ModelEventSubscriber from '../core/events/model-event-subscriber';
-import SimulationEventPublisher from '../core/events/simulation-event-publisher';
-import Simulation from '../engine/simulation';
+import GalaxyManager, { BuildingConfigurations, InventionConfigurations } from '../core/galaxy-manager.js';
+import Logger from '../utils/logger.js';
+import ModelEventClient from '../core/events/model-event-client.js';
+import ModelEventSubscriber from '../core/events/model-event-subscriber.js';
+import SimulationEventPublisher from '../core/events/simulation-event-publisher.js';
+import Simulation from '../engine/simulation.js';
 
-import BuildingCache from '../building/building-cache';
-import { asBuildingDao } from '../building/building-dao';
-import CompanyCache from '../company/company-cache';
-import { asCompanyDao } from '../company/company-dao';
-import InventionSummaryCache from '../company/invention-summary-cache';
-import { asInventionSummaryDao } from '../company/invention-summary-dao';
-import CorporationCache from '../corporation/corporation-cache';
-import { asCorporationDao } from '../corporation/corporation-dao';
-import PlanetCache from '../planet/planet-cache';
-import { asPlanetDao } from '../planet/planet-dao';
-import RankingsCache from '../corporation/rankings-cache';
-import { asRankingsDao } from '../corporation/rankings-dao';
-import TownCache from '../planet/town-cache';
-import { asTownDao } from '../planet/town-dao';
-import { asTycoonDao } from '../tycoon/tycoon-dao';
-import TycoonCache from '../tycoon/tycoon-cache';
-import SimulationContext from '../engine/simulation-context';
-import Utils from '../utils/utils';
+import BuildingCache from '../building/building-cache.js';
+import { asBuildingDao } from '../building/building-dao.js';
+import CompanyCache from '../company/company-cache.js';
+import { asCompanyDao } from '../company/company-dao.js';
+import InventionSummaryCache from '../company/invention-summary-cache.js';
+import { asInventionSummaryDao } from '../company/invention-summary-dao.js';
+import CorporationCache from '../corporation/corporation-cache.js';
+import { asCorporationDao } from '../corporation/corporation-dao.js';
+import PlanetCache from '../planet/planet-cache.js';
+import { asPlanetDao } from '../planet/planet-dao.js';
+import RankingsCache from '../corporation/rankings-cache.js';
+import { asRankingsDao } from '../corporation/rankings-dao.js';
+import TownCache from '../planet/town-cache.js';
+import { asTownDao } from '../planet/town-dao.js';
+import { asTycoonDao } from '../tycoon/tycoon-dao.js';
+import TycoonCache from '../tycoon/tycoon-cache.js';
+import SimulationContext from '../engine/simulation-context.js';
+import Utils from '../utils/utils.js';
 
 
 const planetIndex = parseInt(process.argv[3]);

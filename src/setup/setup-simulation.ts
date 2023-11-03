@@ -1,7 +1,7 @@
 import { DateTime } from "luxon";
 
-import Planet from "../planet/planet";
-import { SetupPlanetStores } from "./setup-planet";
+import Planet from "../planet/planet.js";
+import { type SetupPlanetStores } from "./setup-planet.js";
 
 
 export default class SetupSimulation {

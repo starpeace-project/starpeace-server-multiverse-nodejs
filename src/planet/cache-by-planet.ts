@@ -1,6 +1,6 @@
 import _ from 'lodash';
 
-import { PlanetMetadata } from '../core/galaxy-manager';
+import { type PlanetMetadata } from '../core/galaxy-manager.js';
 
 
 export interface LoadableCache {
