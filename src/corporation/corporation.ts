@@ -4,6 +4,18 @@ import { DateTime } from 'luxon';
 import Company from '../company/company.js';
 import Utils from '../utils/utils.js';
 
+export interface CorporationParameters {
+  id: string;
+  tycoonId: string;
+  planetId: string;
+  name: string;
+  levelId: string;
+  lastMailAt?: DateTime | undefined;
+  buildingCount: number;
+  companyIds: Set<string>;
+  cash: number;
+  prestige?: number | undefined;
+}
 
 export default class Corporation {
   id: string;
@@ -13,33 +25,26 @@ export default class Corporation {
   name: string;
   levelId: string;
 
-  lastMailAt: DateTime | null;
-  buildingCount: number;
+  lastMailAt: DateTime | undefined;
+  buildingCount: number; // FIXME: TODO: can remove?
 
   companyIds: Set<string>;
 
-  cashAsOf: DateTime;
   cash: number;
-  cashCurrentYear: number;
-  cashflow: number;
-
   prestige: number;
 
 
-  constructor (id: string, tycoonId: string, planetId: string, name: string, levelId: string, lastMailAt: DateTime | null, buildingCount: number, companyIds: Set<string>, cashAsOf: DateTime, cash: number, cashCurrentYear: number, cashflow: number, prestige: number) {
-    this.id = id;
-    this.tycoonId = tycoonId;
-    this.planetId = planetId;
-    this.name = name;
-    this.levelId = levelId;
-    this.lastMailAt = lastMailAt;
-    this.buildingCount = buildingCount;
-    this.companyIds = companyIds;
-    this.cashAsOf = cashAsOf;
-    this.cash = cash;
-    this.cashCurrentYear = cashCurrentYear;
-    this.cashflow = cashflow;
-    this.prestige = prestige;
+  constructor (parameters: CorporationParameters) {
+    this.id = parameters.id;
+    this.tycoonId = parameters.tycoonId;
+    this.planetId = parameters.planetId;
+    this.name = parameters.name;
+    this.levelId = parameters.levelId;
+    this.lastMailAt = parameters.lastMailAt;
+    this.buildingCount = parameters.buildingCount;
+    this.companyIds = parameters.companyIds;
+    this.cash = parameters.cash;
+    this.prestige = parameters.prestige ?? 0;
   }
 
   withLastMailAt (time: DateTime): Corporation {
@@ -49,10 +54,6 @@ export default class Corporation {
 
   withCash (cash: number): Corporation {
     this.cash = cash;
-    return this;
-  }
-  withCashflow (cashflow: number): Corporation {
-    this.cashflow = cashflow;
     return this;
   }
 
@@ -66,10 +67,7 @@ export default class Corporation {
       lastMailAt: this.lastMailAt?.toISO(),
       buildingCount: this.buildingCount,
       companyIds: Array.from(this.companyIds),
-      cashAsOf: this.cashAsOf.toISO(),
       cash: this.cash,
-      cashCurrentYear: this.cashCurrentYear,
-      cashflow: this.cashflow,
       prestige: this.prestige
     };
   }
@@ -82,48 +80,39 @@ export default class Corporation {
       name: this.name,
       levelId: this.levelId,
       buildingCount: this.buildingCount,
-      companies: _.map(companies, (company) => company.toJsonApi()),
-      cashAsOf: this.cashAsOf.toISO(),
+      companies: _.map(companies, (company) => company.toJson()),
       cash: this.cash,
-      cashCurrentYear: this.cashCurrentYear,
-      cashflow: this.cashflow,
       prestige: this.prestige
     };
   }
 
-  static create (tycoonId: string, planetId: string, name: string, levelId: string, cashAsOf: DateTime, initialCash: number): Corporation {
-    return new Corporation(
-      Utils.uuid(),
-      tycoonId,
-      planetId,
-      name,
-      levelId,
-      null,
-      0,
-      new Set(),
-      cashAsOf,
-      initialCash,
-      initialCash,
-      0,
-      0
-    );
+  static create (tycoonId: string, planetId: string, name: string, levelId: string, initialCash: number): Corporation {
+    return new Corporation({
+      id: Utils.uuid(),
+      tycoonId: tycoonId,
+      planetId: planetId,
+      name: name,
+      levelId: levelId,
+      lastMailAt: undefined,
+      buildingCount: 0,
+      companyIds: new Set(),
+      cash: initialCash,
+      prestige: 0
+    });
   }
 
   static fromJson (json: any): Corporation {
-    return new Corporation(
-      json.id,
-      json.tycoonId,
-      json.planetId,
-      json.name,
-      json.levelId,
-      json.lastMailAt ? DateTime.fromISO(json.lastMailAt) : null,
-      parseInt(json.buildingCount ?? 0),
-      new Set(Array.isArray(json.companyIds) ? json.companyIds : []),
-      DateTime.fromISO(json.cashAsOf),
-      json.cash ?? 0,
-      json.cashCurrentYear ?? 0,
-      json.cashflow ?? 0,
-      json.prestige ?? 0
-    );
+    return new Corporation({
+      id: json.id,
+      tycoonId: json.tycoonId,
+      planetId: json.planetId,
+      name: json.name,
+      levelId: json.levelId,
+      lastMailAt: json.lastMailAt ? DateTime.fromISO(json.lastMailAt) : undefined,
+      buildingCount: parseInt(json.buildingCount ?? 0),
+      companyIds: new Set(Array.isArray(json.companyIds) ? json.companyIds : []),
+      cash: json.cash,
+      prestige: json.prestige
+    });
   }
 }

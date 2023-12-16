@@ -8,15 +8,22 @@ import TycoonVisa from '../../tycoon/tycoon-visa.js';
 
 import Bookmark from '../../corporation/bookmark.js';
 import Building from '../../building/building.js';
-import BuildingLabor from '../../building/building-labor.js';
-import BuildingProduct from '../../building/building-product.js';
+import BuildingConstruction from '../../building/construction/building-construction.js';
 import Company from '../../company/company.js';
 import Corporation from '../../corporation/corporation.js';
+import GovernmentMetrics from '../../planet/government/government-metrics.js';
+import GovernmentPolitics from '../../planet/government/government-politics.js';
+import GovernmentTaxes from '../../planet/government/government-taxes.js';
+import InventionSummary from '../../company/invention-summary.js';
 import Mail from '../../corporation/mail.js';
 import Planet from '../../planet/planet.js';
 import Rankings from '../../corporation/rankings.js';
 import Town from '../../planet/town.js';
-import InventionSummary from '../../company/invention-summary.js';
+import TycoonSettings from '../../tycoon/settings/tycoon-settings.js';
+import BuildingSettings from '../../building/settings/building-settings.js';
+import BuildingMetrics from '../../building/metrics/building-metrics.js';
+import BuildingCloneSettings from '../../building/settings/building-clone-settings.js';
+import BuildingConnection from '../../building/connections/building-connection.js';
 
 
 const SYNC_API_PORT = 19165;
@@ -78,6 +85,15 @@ export default class ModelEventClient {
       await this.requestSocket.send(JSON.stringify({ type: 'TYCOON:GET', tycoonId: tycoonId }));
       const [result] = await this.requestSocket.receive();
       return Tycoon.fromJson(JSON.parse(result.toString()).tycoon);
+    }, { throwOnTimeout: true });
+  }
+
+  async getTycoonSettings (planetId: string, tycoonId: string): Promise<TycoonSettings | undefined> {
+    return await this.requestQueue.add(async () => {
+      await this.requestSocket.send(JSON.stringify({ type: 'TYCOON_SETTINGS:GET', planetId: planetId, tycoonId: tycoonId }));
+      const [response] = await this.requestSocket.receive();
+      const settings = JSON.parse(response.toString()).settings;
+      return settings ? TycoonSettings.fromJson(settings) : undefined;
     }, { throwOnTimeout: true });
   }
 
@@ -182,36 +198,108 @@ export default class ModelEventClient {
       }
     }, { throwOnTimeout: true });
   }
+  async renameBuilding (planetId: string, buildingId: string, name: string): Promise<Building> {
+    return await this.requestQueue.add(async () => {
+      await this.requestSocket.send(JSON.stringify({ type: 'BUILDING:RENAME', planetId, buildingId, name }));
+      const [result] = await this.requestSocket.receive();
+      const jsonResult = JSON.parse(result.toString());
+      if (jsonResult.error) {
+        throw jsonResult.error;
+      }
+      else {
+        return Building.fromJson(jsonResult.building);
+      }
+    }, { throwOnTimeout: true });
+  }
+  async demolishBuilding (planetId: string, buildingId: string): Promise<Building> {
+    return await this.requestQueue.add(async () => {
+      await this.requestSocket.send(JSON.stringify({ type: 'BUILDING:DEMOLISH', planetId, buildingId }));
+      const [result] = await this.requestSocket.receive();
+      const jsonResult = JSON.parse(result.toString());
+      if (jsonResult.error) {
+        throw jsonResult.error;
+      }
+      else {
+        return Building.fromJson(jsonResult.building);
+      }
+    }, { throwOnTimeout: true });
+  }
 
-  async listBuildingLabors (planetId: string, buildingId: string): Promise<BuildingLabor[]> {
-    return await this.requestQueue.add(async () => {
-      await this.requestSocket.send(JSON.stringify({ type: 'BUILDING_LABOR:LIST', planetId: planetId, buildingId: buildingId }));
+  async listBuildingConstructions (planetId: string): Promise<Array<BuildingConstruction>> {
+    return await (this.requestQueue.add(async () => {
+      await this.requestSocket.send(JSON.stringify({ type: 'BUILDING_CONSTRUCTION:LIST', planetId: planetId }));
       const [result] = await this.requestSocket.receive();
-      return (JSON.parse(result.toString()).labors ?? []).map(BuildingLabor.fromJson);
+      return (JSON.parse(result.toString()).constructions ?? []).map(BuildingConstruction.fromJson);
+    }));
+  }
+  async getBuildingConstruction (planetId: string, buildingId: string): Promise<BuildingConstruction | undefined> {
+    return await (this.requestQueue.add(async () => {
+      await this.requestSocket.send(JSON.stringify({ type: 'BUILDING_CONSTRUCTION:GET', planetId: planetId, buildingId: buildingId }));
+      const [result] = await this.requestSocket.receive();
+      const json = JSON.parse(result.toString()).construction;
+      return json ? BuildingConstruction.fromJson(json) : undefined;
+    }) as Promise<BuildingConstruction | undefined>);
+  }
+
+  async listBuildingSettings (planetId: string): Promise<BuildingSettings[]> {
+    return await this.requestQueue.add(async () => {
+      await this.requestSocket.send(JSON.stringify({ type: 'BUILDING_SETTINGS:LIST', planetId: planetId }));
+      const [result] = await this.requestSocket.receive();
+      return (JSON.parse(result.toString()).settings ?? []).map(BuildingSettings.fromJson);
     });
   }
-  async getBuildingLabor (planetId: string, id: string): Promise<BuildingLabor | undefined> {
+  async getBuildingSettings (planetId: string, buildingId: string): Promise<BuildingSettings | undefined> {
     return await (this.requestQueue.add(async () => {
-      await this.requestSocket.send(JSON.stringify({ type: 'BUILDING_LABOR:GET', planetId: planetId, id: id }));
+      await this.requestSocket.send(JSON.stringify({ type: 'BUILDING_SETTINGS:GET', planetId: planetId, buildingId: buildingId }));
       const [result] = await this.requestSocket.receive();
-      const json = JSON.parse(result.toString()).labor;
-      return json ? BuildingLabor.fromJson(json) : undefined;
-    }) as Promise<BuildingLabor | undefined>);
+      const json = JSON.parse(result.toString()).settings;
+      return json ? BuildingSettings.fromJson(json) : undefined;
+    }) as Promise<BuildingSettings | undefined>);
   }
-  async listBuildingProducts (planetId: string, buildingId: string): Promise<BuildingProduct[]> {
-    return await this.requestQueue.add(async () => {
-      await this.requestSocket.send(JSON.stringify({ type: 'BUILDING_PRODUCT:LIST', planetId: planetId, buildingId: buildingId }));
+  async setBuildingSettings (planetId: string, buildingId: string, settings: BuildingSettings): Promise<BuildingSettings | undefined> {
+    return await (this.requestQueue.add(async () => {
+      await this.requestSocket.send(JSON.stringify({ type: 'BUILDING_SETTINGS:SET', planetId: planetId, buildingId: buildingId, settings: settings.toJson() }));
       const [result] = await this.requestSocket.receive();
-      return (JSON.parse(result.toString()).products ?? []).map(BuildingProduct.fromJson);
+      const json = JSON.parse(result.toString()).settings;
+      return json ? BuildingSettings.fromJson(json) : undefined;
+    }) as Promise<BuildingSettings | undefined>);
+  }
+  async cloneBuildingSettings (planetId: string, buildingId: string, settings: BuildingCloneSettings): Promise<number> {
+    return await this.requestQueue.add(async () => {
+      await this.requestSocket.send(JSON.stringify({ type: 'BUILDING_SETTINGS:CLONE', planetId, buildingId, settings: settings.toJson() }));
+      const [result] = await this.requestSocket.receive();
+      const jsonResult = JSON.parse(result.toString());
+      if (jsonResult.error) {
+        throw jsonResult.error;
+      }
+      else {
+        return jsonResult.count;
+      }
+    }, { throwOnTimeout: true });
+  }
+
+  async listBuildingMetrics (planetId: string): Promise<BuildingMetrics[]> {
+    return await this.requestQueue.add(async () => {
+      await this.requestSocket.send(JSON.stringify({ type: 'BUILDING_METRICS:LIST', planetId: planetId }));
+      const [result] = await this.requestSocket.receive();
+      return (JSON.parse(result.toString()).metrics ?? []).map(BuildingMetrics.fromJson);
     });
   }
-  async getBuildingProduct (planetId: string, id: string): Promise<BuildingProduct | undefined> {
+  async getBuildingMetrics (planetId: string, buildingId: string): Promise<BuildingMetrics | undefined> {
     return await (this.requestQueue.add(async () => {
-      await this.requestSocket.send(JSON.stringify({ type: 'BUILDING_PRODUCT:GET', planetId: planetId, id: id }));
+      await this.requestSocket.send(JSON.stringify({ type: 'BUILDING_METRICS:GET', planetId: planetId, buildingId: buildingId }));
       const [result] = await this.requestSocket.receive();
-      const json = JSON.parse(result.toString()).product;
-      return json ? BuildingProduct.fromJson(json) : undefined;
-    }) as Promise<BuildingProduct | undefined>);
+      const json = JSON.parse(result.toString()).metrics;
+      return json ? BuildingMetrics.fromJson(json) : undefined;
+    }) as Promise<BuildingMetrics | undefined>);
+  }
+
+  async listBuildingConnections (planetId: string, sourceBuildingId: string | undefined, sinkBuildingId: string | undefined, resourceId: string): Promise<BuildingConnection[]> {
+    return await this.requestQueue.add(async () => {
+      await this.requestSocket.send(JSON.stringify({ type: 'BUILDING_CONNECTIONS:LIST', planetId: planetId, sourceBuildingId: sourceBuildingId, sinkBuildingId: sinkBuildingId, resourceId: resourceId }));
+      const [result] = await this.requestSocket.receive();
+      return (JSON.parse(result.toString()).connections ?? []).map(BuildingConnection.fromJson);
+    });
   }
 
   async getCompanyInventionSummary (planetId: string, companyId: string): Promise<InventionSummary> {
@@ -282,7 +370,7 @@ export default class ModelEventClient {
       await this.requestSocket.send(JSON.stringify({ type: 'TOWN:LIST', planetId: planetId }));
       const [result] = await this.requestSocket.receive();
       return (JSON.parse(result.toString()).towns ?? []).map(Town.fromJson);
-    });
+    }, { throwOnTimeout: true });
   }
 
   async allRankings (planetId: string): Promise<Rankings[]> {
@@ -290,7 +378,33 @@ export default class ModelEventClient {
       await this.requestSocket.send(JSON.stringify({ type: 'RANKINGS:LIST', planetId: planetId }));
       const [result] = await this.requestSocket.receive();
       return (JSON.parse(result.toString()).rankings ?? []).map(Rankings.fromJson);
-    });
+    }, { throwOnTimeout: true });
   }
 
+  async governmentMetricsForTownId (planetId: string, townId: string): Promise<GovernmentMetrics | undefined> {
+    return await this.requestQueue.add(async () => {
+      await this.requestSocket.send(JSON.stringify({ type: 'GOVERNMENT_METRICS:GET', planetId: planetId, townId: townId }));
+      const [result] = await this.requestSocket.receive();
+      const metrics = JSON.parse(result.toString()).metrics;
+      return metrics ? GovernmentMetrics.fromJson(metrics) : undefined;
+    }, { throwOnTimeout: true });
+  }
+
+  async governmentPoliticsForTownId (planetId: string, townId: string): Promise<GovernmentPolitics | undefined> {
+    return await this.requestQueue.add(async () => {
+      await this.requestSocket.send(JSON.stringify({ type: 'GOVERNMENT_POLITICS:GET', planetId: planetId, townId: townId }));
+      const [result] = await this.requestSocket.receive();
+      const politics = JSON.parse(result.toString()).politics;
+      return politics ? GovernmentPolitics.fromJson(politics) : undefined;
+    }, { throwOnTimeout: true });
+  }
+
+  async governmentTaxesForTownId (planetId: string, townId: string): Promise<GovernmentTaxes | undefined> {
+    return await this.requestQueue.add(async () => {
+      await this.requestSocket.send(JSON.stringify({ type: 'GOVERNMENT_TAXES:GET', planetId: planetId, townId: townId }));
+      const [result] = await this.requestSocket.receive();
+      const taxes = JSON.parse(result.toString()).taxes;
+      return taxes ? GovernmentTaxes.fromJson(taxes) : undefined;
+    }, { throwOnTimeout: true });
+  }
 }

@@ -27,11 +27,52 @@ If you discover a security vulnerability within the STARPEACE website, please se
 
 All contributions welcome: development, game design, translations, or play-testing; please let us know if you'd like to get involved! Please [join Discord chatroom](https://discord.gg/TF9Bmsj) to learn more.
 
-## Build and Deployment
+## Build and Development
 
-Server can rebuilt locally by retrieving repository and invoking ```grunt build```. Packaged binaries can be compiled for current OS by running ```grunt package```.
+Local development can be accomplished in a few commands. The following build-time dependencies must be installed:
 
-Once compiled or binary created, multiverse and planets must be initialized with configuration setup, by invoking ```node ./dist/setup.js```. After configuring planet, server can be started with ```node ./dist/index.js```
+* [Node.js](https://nodejs.org/en/) javascript runtime and [npm](https://www.npmjs.com/get-npm) package manager
+
+Retrieve copy of repository and navigate to root:
+
+```
+$ git clone https://github.com/starpeace-project/starpeace-server-multiverse-nodejs.git
+$ cd starpeace-server-multiverse-nodejs
+```
+
+Install starpeace-server-multiverse-nodejs dependencies:
+
+```
+$ npm install
+```
+
+Build repository with npm command defined in package.json:
+
+```
+$ npm run build
+```
+
+Once compiled or binary created, multiverse and planets must be initialized with configuration setup, by invoking:
+
+```
+$ node ./dist/app/setup.js
+```
+
+Once configured, server can be started with:
+
+```
+$ node ./dist/app/server.js
+```
+
+## Deployment
+
+### SSL
+
+https://github.com/therootcompany/greenlock-express.js
+
+### Process Manager
+
+https://github.com/Unitech/pm2
 
 ## License
 

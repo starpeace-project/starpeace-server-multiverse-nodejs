@@ -26,11 +26,11 @@ export default class TycoonApi {
 
   getTycoon (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
-      if (!req.params.tycoonId) return res.status(400);
+      if (!req.params.tycoonId) return res.sendStatus(400);
 
       try {
         const tycoon: Tycoon | null = this.caches.tycoon.forId(req.params.tycoonId);
-        if (!tycoon) return res.status(404);
+        if (!tycoon) return res.sendStatus(404);
 
         return res.json({
           id: tycoon.id,
@@ -40,18 +40,18 @@ export default class TycoonApi {
       }
       catch (err) {
         this.logger.error(err);
-        return res.status(500);
+        return res.sendStatus(500);
       }
     };
   }
 
   getTycoonCorporations (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
-      if (!req.params.tycoonId) return res.status(400);
+      if (!req.params.tycoonId) return res.sendStatus(400);
 
       try {
         const tycoon: Tycoon | null = this.caches.tycoon.forId(req.params.tycoonId);
-        if (!tycoon) return res.status(404);
+        if (!tycoon) return res.sendStatus(404);
 
         const identifiersJson = this.caches.corporation.entries().map(([planetId, cache]) => {
           const corporation: Corporation | null = cache.forTycoonId(tycoon.id);
@@ -64,17 +64,17 @@ export default class TycoonApi {
       }
       catch (err) {
         this.logger.error(err);
-        return res.status(500);
+        return res.sendStatus(500);
       }
     };
   }
 
   getSearch (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
-      if (!req.planet) return res.status(400);
+      if (!req.planet) return res.sendStatus(400);
 
       const query: string = _.trim(req.query.query as string).toLowerCase();
-      if (req.query.startsWithQuery && query.length < 1 || !req.query.startsWithQuery && query.length < 3) return res.status(400);
+      if (req.query.startsWithQuery && query.length < 1 || !req.query.startsWithQuery && query.length < 3) return res.sendStatus(400);
 
       try {
         const matchedTycoons: Tycoon[] = this.caches.tycoon.all().filter(tycoon => {
@@ -86,8 +86,8 @@ export default class TycoonApi {
 
         const corporationCache: CorporationCache = this.caches.corporation.withPlanet(req.planet);
         return res.json(matchedTycoons.map(tycoon => {
-          const corporation: Corporation | null = corporationCache.forTycoonId(tycoon.id);
-          return !corporation ? null : {
+          const corporation: Corporation | undefined = corporationCache.forTycoonId(tycoon.id);
+          return !corporation ? undefined : {
             tycoonId: tycoon.id,
             tycoonName: tycoon.name,
             corporationId: corporation.id,
@@ -97,7 +97,7 @@ export default class TycoonApi {
       }
       catch (err) {
         this.logger.error(err);
-        return res.status(500);
+        return res.sendStatus(500);
       }
     };
   }

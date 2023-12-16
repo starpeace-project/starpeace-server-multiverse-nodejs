@@ -49,6 +49,6 @@ export default class MapCache {
   }
 
   findTown (mapX: number, mapY: number): Town | null {
-    return this.townCache.forColor(this.townData[mapY * this.planetMetadata.planetWidth + mapX]);
+    return this.townCache.forColor(this.townData[mapX * this.planetMetadata.planetWidth + mapY]);
   }
 }

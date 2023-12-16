@@ -4,17 +4,23 @@ import winston from 'winston';
 import { Subscriber } from 'zeromq';
 
 import Building from '../../building/building.js';
+import BuildingConstruction from '../../building/construction/building-construction.js';
 import Company from '../../company/company.js';
 import Corporation from '../../corporation/corporation.js';
+import InventionSummary from '../../company/invention-summary.js';
 import Tycoon from '../../tycoon/tycoon.js';
 import TycoonVisa from '../../tycoon/tycoon-visa.js';
-import InventionSummary from '../../company/invention-summary.js';
+import BuildingSettings from '../../building/settings/building-settings.js';
+import BuildingMetrics from '../../building/metrics/building-metrics.js';
 
 const ASYNC_SERVER_TO_CLIENT_PORT = 19166;
 
 const SOCKET_SUBSCRIBER_TOPICS = [
   'SOCKET:CONNECT', 'SOCKET:DISCONNECT',
   'BUILDING:UPDATE',
+  'BUILDING_CONSTRUCTION:UPDATE',
+  'BUILDING_METRICS:UPDATE',
+  'BUILDING_SETTINGS:UPDATE',
   'COMPANY:UPDATE',
   'CORPORATION:UPDATE',
   'INVENTION:START', 'INVENTION:SELL',
@@ -59,6 +65,15 @@ export default class ModelEventSubscriber {
         else if (type === 'BUILDING:UPDATE') {
           this.events.emit('updateBuilding', { planetId: notification.planetId, building: Building.fromJson(notification.building) });
         }
+        else if (type === 'BUILDING_CONSTRUCTION:UPDATE') {
+          this.events.emit('updateBuildingConstruction', { planetId: notification.planetId, construction: BuildingConstruction.fromJson(notification.construction) });
+        }
+        else if (type === 'BUILDING_METRICS:UPDATE') {
+          this.events.emit('updateBuildingMetrics', { planetId: notification.planetId, metrics: BuildingMetrics.fromJson(notification.metrics) });
+        }
+        else if (type === 'BUILDING_SETTINGS:UPDATE') {
+          this.events.emit('updateBuildingSettings', { planetId: notification.planetId, settings: BuildingSettings.fromJson(notification.settings) });
+        }
         else if (type === 'COMPANY:UPDATE') {
           this.events.emit('updateCompany', { planetId: notification.planetId, company: Company.fromJson(notification.company) });
         }
@@ -83,6 +98,10 @@ export default class ModelEventSubscriber {
         else if (type === 'VISA:DELETE') {
           this.events.emit('deleteVisa', { visaId: notification.visaId });
         }
+        else if (type === 'VISA:VIEW') {
+          this.events.emit('viewVisa', { visaId: notification.visaId, viewX: notification.viewX, viewY: notification.viewY });
+        }
+
         else {
           this.logger.warn(`Model Event Subscriber received unknown event topic ${topic}`);
         }

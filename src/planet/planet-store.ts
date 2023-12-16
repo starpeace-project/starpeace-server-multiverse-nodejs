@@ -18,7 +18,7 @@ export default class PlanetStore implements PlanetDao {
     }
   }
 
-  close (): Promise<void> {
+  async close (): Promise<void> {
     return new Promise((resolve: Function, reject: Function) => {
       this.db.close((err:Error | null): void => {
         if (err) return reject(err);
@@ -27,7 +27,7 @@ export default class PlanetStore implements PlanetDao {
     });
   }
 
-  get (): Promise<Planet | null> {
+  async get (): Promise<Planet | null> {
     return new Promise((resolve: Function, reject: Function) => {
       this.db.get("SELECT content FROM planet WHERE id = ?", ['PLANET_ID'], (err: Error, row: any) => {
         if (err) return reject(err);
@@ -36,7 +36,7 @@ export default class PlanetStore implements PlanetDao {
     });
   }
 
-  set (planet: Planet): Promise<Planet> {
+  async set (planet: Planet): Promise<Planet> {
     return new Promise((resolve: Function, reject: Function) => {
       if (this.readOnly) return reject('READ_ONLY');
       this.db.get("INSERT OR REPLACE INTO planet (id, content) VALUES (?, ?)", ['PLANET_ID', JSON.stringify(planet.toJson())], (err: Error) => {

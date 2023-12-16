@@ -11,39 +11,52 @@ import SimulationEventSubscriber from './events/simulation-event-subscriber.js';
 import ApiFactory from './api/api-factory.js';
 import BusFactory from './bus/bus-factory.js';
 import ConnectionManager from './connection-manager.js';
-import GalaxyManager, { BuildingConfigurations, InventionConfigurations } from './galaxy-manager.js';
+import GalaxyManager, { BuildingConfigurations, CoreConfigurations, InventionConfigurations } from './galaxy-manager.js';
 import CacheByPlanet from '../planet/cache-by-planet.js';
 
 import TycoonCache from '../tycoon/tycoon-cache.js';
 import TycoonSocketCache from '../tycoon/tycoon-socket-cache.js';
 import { asTycoonDao } from '../tycoon/tycoon-dao.js';
 
+import BusEventsCache from './bus/bus-events-cache.js';
 import BuildingCache from '../building/building-cache.js';
 import { asBuildingDao } from '../building/building-dao.js';
+import BuildingConstructionCache from '../building/construction/building-construction-cache.js';
+import { asBuildingConstructionDao } from '../building/construction/building-construction-dao.js';
+import CashflowCache from '../finances/cashflow-cache.js';
 import CorporationCache from '../corporation/corporation-cache.js';
 import { asCorporationDao } from '../corporation/corporation-dao.js';
 import CompanyCache from '../company/company-cache.js';
 import { asCompanyDao } from '../company/company-dao.js';
 import InventionSummaryCache from '../company/invention-summary-cache.js';
 import { asInventionSummaryDao } from '../company/invention-summary-dao.js';
+import MapCache from '../planet/map-cache.js';
 import PlanetCache from '../planet/planet-cache.js';
 import { asPlanetDao } from '../planet/planet-dao.js';
 import RankingsCache from '../corporation/rankings-cache.js';
 import { asRankingsDao } from '../corporation/rankings-dao.js';
+import SimulationFrame from '../engine/simulation-frame.js';
 import TownCache from '../planet/town-cache.js';
 import { asTownDao } from '../planet/town-dao.js';
 import TycoonVisaCache from '../tycoon/tycoon-visa-cache.js';
 import { asTycoonVisaDao } from '../tycoon/tycoon-visa-dao.js';
-import SimulationFrame from '../engine/simulation-frame.js';
-import MapCache from '../planet/map-cache.js';
 
+import Logger from '../utils/logger.js';
 
 export interface HttpServerCaches {
+  buildingConfigurations: Record<string, BuildingConfigurations>;
+  coreConfigurations: Record<string, CoreConfigurations>;
+  inventionConfigurations: Record<string, InventionConfigurations>;
+
   tycoon: TycoonCache;
   tycoonSocket: TycoonSocketCache;
   tycoonVisa: TycoonVisaCache;
 
+  busEvents: BusEventsCache;
+
   building: CacheByPlanet<BuildingCache>;
+  buildingConstruction: CacheByPlanet<BuildingConstructionCache>;
+  cashflow: CacheByPlanet<CashflowCache>;
   company: CacheByPlanet<CompanyCache>;
   corporation: CacheByPlanet<CorporationCache>;
   inventionSummary: CacheByPlanet<InventionSummaryCache>;
@@ -70,7 +83,6 @@ export default class HttpServer {
 
   server: http.Server;
   io: ioServer;
-
 
   constructor () {
     this.logger = winston.createLogger({
@@ -99,19 +111,56 @@ export default class HttpServer {
     this.galaxyManager = GalaxyManager.create(this.logger);
     const planetIds: string[] = this.galaxyManager.planets.map((p) => p.id);
 
-    const companyByPlanet: Record<string, CompanyCache> = Object.fromEntries(planetIds.map((id: string) => [id, new CompanyCache(asCompanyDao(this.modelEventClient, id))]));
-    const townByPlanet: Record<string, TownCache> = Object.fromEntries(planetIds.map((id: string) => [id, new TownCache(asTownDao(this.modelEventClient, id))]));
+    const buildingConfigurations: Record<string, BuildingConfigurations> = {};
+    const coreConfigurations: Record<string, CoreConfigurations> = {};
+    const inventionConfigurations: Record<string, InventionConfigurations> = {};
+
+    const cashflowByPlanet: Record<string, CashflowCache> = {};
+    const companyByPlanet: Record<string, CompanyCache> = {};
+    const townByPlanet: Record<string, TownCache> = {};
+    const buildingByPlanet: Record<string, BuildingCache> = {};
+    const constructionByPlanet: Record<string, BuildingConstructionCache> = {};
+    const corporationByPlanet: Record<string, CorporationCache> = {};
+    const inventionByPlanet: Record<string, InventionSummaryCache> = {};
+    const mapByPlanet: Record<string, MapCache> = {};
+    const planetByPlanet: Record<string, PlanetCache> = {};
+    const rankingByPlanet: Record<string, RankingsCache> = {};
+
+    for (const id of planetIds) {
+      cashflowByPlanet[id] = new CashflowCache();
+      companyByPlanet[id] = new CompanyCache(asCompanyDao(this.modelEventClient, id));
+      townByPlanet[id] = new TownCache(asTownDao(this.modelEventClient, id));
+
+      buildingConfigurations[id] = this.galaxyManager.metadataBuildingForPlanet(id) ?? new BuildingConfigurations([], [], []);
+      coreConfigurations[id] = this.galaxyManager.metadataCoreForPlanet(id) ?? new CoreConfigurations([], [], [], [], [], [], [], []);
+      inventionConfigurations[id] = this.galaxyManager.metadataInventionForPlanet(id) ?? new InventionConfigurations([]);
+
+      buildingByPlanet[id] = new BuildingCache(asBuildingDao(this.modelEventClient, id), this.galaxyManager.forPlanetRequired(id).planetWidth, buildingConfigurations[id], townByPlanet[id]);
+      constructionByPlanet[id] = new BuildingConstructionCache(asBuildingConstructionDao(this.modelEventClient, id));
+      corporationByPlanet[id] = new CorporationCache(asCorporationDao(this.modelEventClient, id));
+      inventionByPlanet[id] = new InventionSummaryCache(asInventionSummaryDao(this.modelEventClient, id), inventionConfigurations[id], companyByPlanet[id]);
+      mapByPlanet[id] = new MapCache(this.galaxyManager.forPlanetRequired(id), townByPlanet[id]);
+      planetByPlanet[id] = new PlanetCache(asPlanetDao(this.modelEventClient, id));
+      rankingByPlanet[id] = new RankingsCache(asRankingsDao(this.modelEventClient, id));
+    }
+
     this.caches = {
+      buildingConfigurations: buildingConfigurations,
+      coreConfigurations: coreConfigurations,
+      inventionConfigurations: inventionConfigurations,
       tycoon: new TycoonCache(asTycoonDao(this.modelEventClient)),
       tycoonSocket: new TycoonSocketCache(),
       tycoonVisa: new TycoonVisaCache(asTycoonVisaDao(this.modelEventClient)),
-      building: new CacheByPlanet(Object.fromEntries(planetIds.map((id: string) => [id, new BuildingCache(asBuildingDao(this.modelEventClient, id), this.galaxyManager.forPlanetRequired(id).planetWidth, this.galaxyManager.metadataBuildingForPlanet(id) ?? new BuildingConfigurations([], [], []), townByPlanet[id])]))),
+      busEvents: new BusEventsCache(),
+      building: new CacheByPlanet(buildingByPlanet),
+      buildingConstruction: new CacheByPlanet(constructionByPlanet),
+      cashflow: new CacheByPlanet(cashflowByPlanet),
       company: new CacheByPlanet(companyByPlanet),
-      corporation: new CacheByPlanet(Object.fromEntries(planetIds.map((id: string) => [id, new CorporationCache(asCorporationDao(this.modelEventClient, id))]))),
-      inventionSummary: new CacheByPlanet(Object.fromEntries(planetIds.map((id: string) => [id, new InventionSummaryCache(asInventionSummaryDao(this.modelEventClient, id), this.galaxyManager.metadataInventionForPlanet(id) ?? new InventionConfigurations([]), companyByPlanet[id])]))),
-      map: new CacheByPlanet(Object.fromEntries(planetIds.map((id: string) => [id, new MapCache(this.galaxyManager.forPlanetRequired(id), townByPlanet[id])]))),
-      planet: new CacheByPlanet(Object.fromEntries(planetIds.map((id: string) => [id, new PlanetCache(asPlanetDao(this.modelEventClient, id))]))),
-      rankings: new CacheByPlanet(Object.fromEntries(planetIds.map((id: string) => [id, new RankingsCache(asRankingsDao(this.modelEventClient, id))]))),
+      corporation: new CacheByPlanet(corporationByPlanet),
+      inventionSummary: new CacheByPlanet(inventionByPlanet),
+      map: new CacheByPlanet(mapByPlanet),
+      planet: new CacheByPlanet(planetByPlanet),
+      rankings: new CacheByPlanet(rankingByPlanet),
       town: new CacheByPlanet(townByPlanet)
     };
 
@@ -122,6 +171,8 @@ export default class HttpServer {
 
     this.configureEvents();
     this.loadCaches();
+
+    setInterval(() => Logger.logMemory(this.logger), 1000 * 900);
   }
 
   configureEvents () {
@@ -134,10 +185,16 @@ export default class HttpServer {
       this.connectionManager.disconnectSocket(event.socketId);
     });
     this.modelEventSubscriber.events.on('updateBuilding', (event) => this.caches.building.withPlanetId(event.planetId).update(event.building));
+    this.modelEventSubscriber.events.on('updateBuildingConstruction', (event) => this.caches.buildingConstruction.withPlanetId(event.planetId).update(event.construction));
     this.modelEventSubscriber.events.on('updateCompany', (event) => this.caches.company.withPlanetId(event.planetId).update(event.company));
     this.modelEventSubscriber.events.on('updateCorporation', (event) => this.caches.corporation.withPlanetId(event.planetId).update(event.corporation));
     this.modelEventSubscriber.events.on('updateTycoon', (event) => this.caches.tycoon.loadTycoon(event.tycoon));
-    this.modelEventSubscriber.events.on('updateVisa', (event) => this.caches.tycoonVisa.set(event.visa));
+    this.modelEventSubscriber.events.on('updateVisa', (event) => {
+      if (!this.caches.tycoonVisa.forId(event.visa.id)) {
+        this.caches.busEvents.queueIssuedVisa(event.visa.planetId, event.visa);
+      }
+      this.caches.tycoonVisa.set(event.visa);
+    });
     this.modelEventSubscriber.events.on('deleteVisa', (event) => this.caches.tycoonVisa.clearByVisaId(event.visaId));
     this.modelEventSubscriber.events.on('startResearch', (event) => this.caches.inventionSummary.withPlanetId(event.planetId).update(event.summary));
     this.modelEventSubscriber.events.on('cancelResearch', (event) => this.caches.inventionSummary.withPlanetId(event.planetId).update(event.summary));
@@ -148,6 +205,7 @@ export default class HttpServer {
     await Promise.all([
       this.caches.tycoon.load(),
       this.caches.tycoonVisa.load(),
+      ...this.caches.cashflow.loadAll(),
       ...this.caches.company.loadAll(),
       ...this.caches.corporation.loadAll(),
       ...this.caches.planet.loadAll(),
@@ -157,6 +215,7 @@ export default class HttpServer {
     // second load (depends on first load)
     await Promise.all([
       ...this.caches.building.loadAll(),
+      ...this.caches.buildingConstruction.loadAll(),
       ...this.caches.inventionSummary.loadAll(),
       ...this.caches.map.loadAll()
     ]);
@@ -165,6 +224,8 @@ export default class HttpServer {
   waitForSimulationState (finishCallback: Function): void {
     if (!this.caches.tycoon.loaded || !this.caches.tycoonVisa.loaded ||
         !this.caches.building.loaded ||
+        !this.caches.buildingConstruction.loaded ||
+        !this.caches.cashflow.loaded ||
         !this.caches.company.loaded ||
         !this.caches.corporation.loaded ||
         !this.caches.inventionSummary.loaded ||
@@ -187,8 +248,9 @@ export default class HttpServer {
     this.simulationSubscriber.start((event) => this.notifySocketsWithSimulation(event));
 
     this.waitForSimulationState(() => {
-      this.server.listen(19160, () => {
-        this.logger.info('Started on port 19160');
+      const port = this.galaxyManager.galaxyMetadata.settings?.port ?? 19160;
+      this.server.listen(port, () => {
+        this.logger.info(`Started on port ${port}`);
         this.running = true;
       });
     });
@@ -210,6 +272,8 @@ export default class HttpServer {
       await Promise.all([
         this.caches.tycoon.close(),
         ...this.caches.building.closeAll(),
+        ...this.caches.buildingConstruction.closeAll(),
+        ...this.caches.cashflow.closeAll(),
         ...this.caches.company.closeAll(),
         ...this.caches.corporation.closeAll(),
         ...this.caches.inventionSummary.closeAll(),

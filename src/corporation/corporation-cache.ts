@@ -1,6 +1,5 @@
 import Corporation from '../corporation/corporation.js';
 import type CorporationDao from './corporation-dao.js';
-import { SimulationCorporationFinances } from '../engine/simulation-frame.js';
 import Utils from '../utils/utils.js';
 
 export default class CorporationCache {
@@ -61,9 +60,11 @@ export default class CorporationCache {
     return Object.values(this.byId);
   }
 
-  forId (corporationId: string): Corporation | null { return this.byId[corporationId]; }
-  forTycoonId (tycoonId: string): Corporation | null {
-    return this.idByTycoonId[tycoonId] ? this.forId(this.idByTycoonId[tycoonId]) : null;
+  forId (corporationId: string): Corporation | undefined {
+    return this.byId[corporationId];
+  }
+  forTycoonId (tycoonId: string): Corporation | undefined {
+    return this.idByTycoonId[tycoonId] ? this.forId(this.idByTycoonId[tycoonId]) : undefined;
   }
 
   update (corporationOrCorporations: Corporation | Array<Corporation>): Corporation | Array<Corporation> {
@@ -79,9 +80,12 @@ export default class CorporationCache {
     return corporationOrCorporations;
   }
 
-  updateFinances (corporationId: string, finances: SimulationCorporationFinances): Corporation | null {
-    const corporation: Corporation | null = this.forId(corporationId)?.withCash(finances.cash)?.withCashflow(finances.cashflow) ?? null;
-    if (corporation) this.dirtyIds.add(corporationId);
+  updateCash (corporationId: string, cash: number): Corporation | undefined {
+    const corporation: Corporation | undefined = this.forId(corporationId);
+    if (corporation && corporation.cash !== cash) {
+      corporation.cash = cash;
+      this.dirtyIds.add(corporationId);
+    }
     return corporation;
   }
 }

@@ -119,7 +119,12 @@ const setupConfiguration = async ({ configurations }: any): Promise<{ configurat
       "tycoonEnabled": true,
       "tycoonCreationEnabled": true,
       "tycoonAuthentication": "password",
-      "secretHash": Utils.uuid()
+      "secretHash": Utils.uuid(),
+      "settings": {
+        "port": 19160,
+        "privateKeyPath": "./galaxy/ssl/privatekey.pem",
+        "certificatePath": "./galaxy/ssl/certificate.pem"
+      }
     };
     fs.writeFileSync('./galaxy/galaxy.config.json', JSON.stringify(galaxyMetadata))
     return { configurations, galaxyMetadata };
@@ -152,7 +157,7 @@ loadConfigurations()
         planetWidth: 1000,
         planetHeight: 1000,
         mapId: "ancoeus",
-        corporationInitialCash: 100000000000
+        corporationInitialCash: 10000000000000
       };
       fs.mkdirSync(`./galaxy/${id}`, { recursive: true });
       fs.writeFileSync(`./galaxy/${id}/planet.config.json`, JSON.stringify(planet));

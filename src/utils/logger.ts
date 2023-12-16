@@ -31,6 +31,10 @@ export default class Logger {
     logger.info("###########################################################################################");
   }
 
+  static logMemory (logger: winston.Logger): void {
+    logger.info(`[Memory Usage] ${Math.round(process.memoryUsage().rss / 1024 / 1024 * 100) / 100} MB`);
+  }
+
   static createProcessLoggerManager (): winston.Logger {
     return winston.createLogger({
       transports: [new winston.transports.DailyRotateFile({

@@ -1,5 +1,5 @@
 
-## v0.1.5 - in progress - updated 2023-05-04
+## v0.1.7 - in progress - updated 2023-12-16
 ### platform
 * [done] nodejs web-server with basic support [v0.1.0]
 * [done] simple in-memory and lightweight databases [v0.1.0]
@@ -16,11 +16,12 @@
 * [done] cashflow event API's (dummy) [v0.1.3]
 * [done] visa and tycoon position support [v0.1.3]
 * [done] rotating and robust logging [v0.1.3]
-* [in progress] corporation and company cash structure
-* [in progress] corporation and company financials API's
-* [in progress] corporation bank account API's
-* [in progress] corporation strategy API's
-* [pending] company suppliers API's
+* [done] corporation and company cash structure
+* [done] corporation and company financials API's [v0.1.6]
+* [done] SSL and secure connection support [v0.1.6]
+* [done] company suppliers API's [v0.1.6]
+* [pending] corporation bank account API's
+* [pending] corporation strategy API's
 * [pending] visitor ID and API support
 * [pending] overlay and city zones API's
 * [pending] road API's
@@ -32,7 +33,9 @@
 ### simulation
 * [done] basic simulation platform
 * [done] research progress [v0.1.4]
-* [in progress] construction progress
+* [done] construction and upgrade progress [v0.1.6]
+* [done] building connections [v0.1.6]
+* [done] basic trade center products support [v0.1.6]
+* [in progress] simulation economics engine v1
 * [pending] initial setup town roads
 * [pending] rankings
-* [pending] simulation economics engine v1

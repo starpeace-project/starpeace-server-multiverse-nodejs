@@ -33,6 +33,8 @@ export default class ProcessManager {
     this.logger = Logger.createProcessLoggerManager();
     Logger.banner(this.logger);
     this.galaxyManager = GalaxyManager.create(this.logger);
+
+    setInterval(() => Logger.logMemory(this.logger), 1000 * 900);
   }
 
   start (): void {

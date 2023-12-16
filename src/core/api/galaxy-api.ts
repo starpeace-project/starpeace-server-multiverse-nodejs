@@ -67,7 +67,7 @@ export default class GalaxyApi {
       }
       catch (err) {
         this.logger.error(err);
-        return res.status(500);
+        return res.sendStatus(500);
       }
     };
   }
@@ -100,13 +100,13 @@ export default class GalaxyApi {
 
   create (): (req: express.Request, res: express.Response, next: any) => any {
     return async (req: express.Request, res: express.Response, next: any): Promise<express.Response> => {
-      if (!req.body.username?.length || !req.body.password?.length) return res.status(400);
+      if (!req.body.username?.length || !req.body.password?.length) return res.sendStatus(400);
       return passport.authenticate('register', { session: false }, async (error: any, user: Tycoon | undefined, info: any) => {
         if (error) {
           if (error === 'INVALID_NAME' || error === 'USERNAME_CONFLICT') {
             return res.status(400).json({ code: error });
           }
-          return res.status(500).json({});
+          return res.sendStatus(500);
         }
         if (!user) return res.status(401).json({ code: info.message });
         return await this.loginUser(req, res, next, user, req.body.rememberMe);
@@ -124,14 +124,14 @@ export default class GalaxyApi {
         }
         catch (err) {
           this.logger.error(err);
-          return res.status(500).json({});
+          return res.sendStatus(500);
         }
       }
       else {
         return passport.authenticate('login', { session: false }, async (err: any, user: Tycoon | undefined) => {
           if (err) {
             this.logger.error(err);
-            return res.status(500).json({});
+            return res.sendStatus(500);
           }
           if (!user) return res.status(401).json({ code: 'INVALID' });
           return await this.loginUser(req, res, next, user, req.body.rememberMe);
@@ -147,11 +147,11 @@ export default class GalaxyApi {
           await this.modelEventClient.destroyVisa(req.visa.id);
         }
         // TODO: may want to add JWT token to blocklist
-        return res.status(200).json({});
+        return res.sendStatus(200);
       }
       catch (err) {
         this.logger.error(err);
-        return res.status(500).json({});
+        return res.sendStatus(500);
       }
     };
   }

@@ -1,8 +1,12 @@
 import { type GalaxyMetadata, type PlanetMetadata } from "../core/galaxy-manager.js";
 import BookmarkStore from "../corporation/bookmark-store.js";
 import BuildingStore from "../building/building-store.js";
+import BuildingConnectionStore from "../building/connections/building-connection-store.js";
+import BuildingMetricsStore from "../building/metrics/building-metrics-store.js";
+import BuildingSettingsStore from "../building/settings/building-settings-store.js";
 import CompanyStore from "../company/company-store.js";
 import CorporationStore from "../corporation/corporation-store.js";
+import GovernmentStore from "../planet/government/government-store.js";
 import InventionSummaryStore from "../company/invention-summary-store.js";
 import MailStore from "../corporation/mail-store.js";
 import RankingsStore from "../corporation/rankings-store.js";
@@ -19,10 +23,14 @@ import SetupTowns from "./setup-towns.js";
 
 export interface SetupPlanetStores {
   building: BuildingStore;
+  buildingConnection: BuildingConnectionStore;
+  buildingMetrics: BuildingMetricsStore;
+  buildingSettings: BuildingSettingsStore;
   company: CompanyStore;
   inventionSummary: InventionSummaryStore;
   bookmark: BookmarkStore;
   corporation: CorporationStore;
+  government: GovernmentStore;
   mail: MailStore;
   ranking: RankingsStore;
   planet: PlanetStore;
@@ -48,10 +56,14 @@ export default class SetupPlanet {
     this.planetMetadata = planetMetadata;
     this.stores = {
       building: new BuildingStore(false, this.planetMetadata.id),
+      buildingConnection: new BuildingConnectionStore(false, this.planetMetadata.id),
+      buildingMetrics: new BuildingMetricsStore(false, this.planetMetadata.id),
+      buildingSettings: new BuildingSettingsStore(false, this.planetMetadata.id),
       company: new CompanyStore(false, this.planetMetadata.id),
       inventionSummary: new InventionSummaryStore(false, this.planetMetadata.id),
       bookmark: new BookmarkStore(false, this.planetMetadata.id),
       corporation: new CorporationStore(false, this.planetMetadata.id),
+      government: new GovernmentStore(false, this.planetMetadata.id),
       mail: new MailStore(false, this.planetMetadata.id),
       ranking: new RankingsStore(false, this.planetMetadata.id),
       planet: new PlanetStore(false, this.planetMetadata.id),
@@ -73,10 +85,14 @@ export default class SetupPlanet {
 
     await Promise.all([
       this.stores.building.close(),
+      this.stores.buildingConnection.close(),
+      this.stores.buildingMetrics.close(),
+      this.stores.buildingSettings.close(),
       this.stores.company.close(),
       this.stores.inventionSummary.close(),
       this.stores.bookmark.close(),
       this.stores.corporation.close(),
+      this.stores.government.close(),
       this.stores.mail.close(),
       this.stores.ranking.close(),
       this.stores.planet.close(),

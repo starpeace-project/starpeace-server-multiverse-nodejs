@@ -2,8 +2,6 @@ import _ from 'lodash';
 import winston from 'winston';
 import { Publisher, Reply, Subscriber } from 'zeromq';
 
-import { BuildingDefinition, BuildingImageDefinition } from '@starpeace/starpeace-assets-types';
-
 import Tycoon from '../../tycoon/tycoon.js';
 import TycoonCache from '../../tycoon/tycoon-cache.js';
 import TycoonStore from '../../tycoon/tycoon-store.js';
@@ -15,11 +13,24 @@ import Bookmark from '../../corporation/bookmark.js';
 import BookmarkStore from '../../corporation/bookmark-store.js';
 import Building from '../../building/building.js';
 import BuildingCache from '../../building/building-cache.js';
+import BuildingConnectionCache from '../../building/connections/building-connection-cache.js';
+import BuildingConstruction from '../../building/construction/building-construction.js';
+import BuildingConstructionCache from '../../building/construction/building-construction-cache.js';
+import BuildingManager from './server/building-manager.js';
+import BuildingMetrics from '../../building/metrics/building-metrics.js';
+import BuildingMetricsCache from '../../building/metrics/building-metrics-cache.js';
+import BuildingSettings from '../../building/settings/building-settings.js';
+import BuildingSettingsCache from '../../building/settings/building-settings-cache.js';
 import BuildingStore from '../../building/building-store.js';
+import CashflowCache from '../../finances/cashflow-cache.js';
 import Corporation from '../../corporation/corporation.js';
 import CorporationCache from '../../corporation/corporation-cache.js';
 import Company from '../../company/company.js';
 import CompanyCache from '../../company/company-cache.js';
+import GovernmentCache from '../../planet/government/government-cache.js';
+import GovernmentMetrics from '../../planet/government/government-metrics.js';
+import GovernmentPolitics from '../../planet/government/government-politics.js';
+import GovernmentTaxes from '../../planet/government/government-taxes.js';
 import InventionSummary from '../../company/invention-summary.js';
 import InventionSummaryCache from '../../company/invention-summary-cache.js';
 import Mail from '../../corporation/mail.js';
@@ -29,11 +40,14 @@ import Rankings from '../../corporation/rankings.js';
 import RankingsCache from '../../corporation/rankings-cache.js';
 import Town from '../../planet/town.js';
 import TownCache from '../../planet/town-cache.js';
+import TycoonSettings from '../../tycoon/settings/tycoon-settings.js';
+import TycoonSettingsCache from '../../tycoon/settings/tycoon-settings-cache.js';
 
 import CacheByPlanet from '../../planet/cache-by-planet.js';
 import Utils from '../../utils/utils.js';
-import BuildingLabor from '../../building/building-labor.js';
-import BuildingProduct from '../../building/building-product.js';
+import { BuildingConfigurations, CoreConfigurations, InventionConfigurations } from '../galaxy-manager.js';
+import BuildingConnection from '../../building/connections/building-connection.js';
+
 
 const SYNC_API_PORT = 19165;
 const ASYNC_SERVER_TO_CLIENT_PORT = 19166;
@@ -55,16 +69,27 @@ export interface ModelEventServerStores {
 }
 
 export interface ModelEventServerCaches {
+  buildingConfigurations: Record<string, BuildingConfigurations>;
+  coreConfigurations: Record<string, CoreConfigurations>;
+  inventionConfigurations: Record<string, InventionConfigurations>;
+
   tycoon: TycoonCache;
   tycoonVisa: TycoonVisaCache;
 
   building: CacheByPlanet<BuildingCache>;
+  buildingConnection: CacheByPlanet<BuildingConnectionCache>;
+  buildingConstruction: CacheByPlanet<BuildingConstructionCache>;
+  buildingMetrics: CacheByPlanet<BuildingMetricsCache>;
+  buildingSettings: CacheByPlanet<BuildingSettingsCache>;
+  cashflow: CacheByPlanet<CashflowCache>;
   company: CacheByPlanet<CompanyCache>;
   corporation: CacheByPlanet<CorporationCache>;
   inventionSummary: CacheByPlanet<InventionSummaryCache>;
+  government: CacheByPlanet<GovernmentCache>;
   planet: CacheByPlanet<PlanetCache>;
   rankings: CacheByPlanet<RankingsCache>;
   town: CacheByPlanet<TownCache>;
+  tycoonSettings: CacheByPlanet<TycoonSettingsCache>;
 }
 
 export default class ModelEventServer {
@@ -78,6 +103,7 @@ export default class ModelEventServer {
   stores: ModelEventServerStores;
   caches: ModelEventServerCaches;
 
+  buildingManager: BuildingManager;
 
   constructor (logger: winston.Logger, stores: ModelEventServerStores, caches: ModelEventServerCaches) {
     this.logger = logger;
@@ -87,6 +113,8 @@ export default class ModelEventServer {
     this.subscriberSocket = new Subscriber();
     this.stores = stores;
     this.caches = caches;
+
+    this.buildingManager = new BuildingManager(this.replySocket, this.publisherSocket, this.caches);
   }
 
   async start (): Promise<void> {
@@ -97,7 +125,6 @@ export default class ModelEventServer {
       await this.publisherSocket.bind(`tcp://127.0.0.1:${ASYNC_SERVER_TO_CLIENT_PORT}`);
       this.logger.info(`Publisher started on port ${ASYNC_SERVER_TO_CLIENT_PORT}`);
 
-      // this.subscriberSocket.connect(`tcp://127.0.0.1:${ASYNC_CLIENT_TO_SERVER_PORT}`);
       await this.subscriberSocket.bind(`tcp://127.0.0.1:${ASYNC_CLIENT_TO_SERVER_PORT}`);
       this.subscriberSocket.subscribe(...SOCKET_SUBSCRIBER_TOPICS);
       this.logger.info(`Subscriber started on port ${ASYNC_CLIENT_TO_SERVER_PORT}`);
@@ -141,6 +168,11 @@ export default class ModelEventServer {
         const tycoon: Tycoon | null = this.caches.tycoon.forId(request.tycoonId);
         await this.replySocket.send(JSON.stringify({ tycoon: tycoon?.toJson() }))
       }
+      else if (request.type == 'TYCOON_SETTINGS:GET') {
+        const settings: TycoonSettings | undefined = this.caches.tycoonSettings.withPlanetId(request.planetId)?.forTycoonId(request.tycoonId);
+        await this.replySocket.send(JSON.stringify({ settings: settings?.toJson() }))
+      }
+
       else if (request.type === 'TOKEN:ISSUE') {
         const token = await this.stores.tycoonToken.set(Utils.randomString(64), request.tycoonId);
         await this.replySocket.send(JSON.stringify({ token: token }));
@@ -182,6 +214,19 @@ export default class ModelEventServer {
         await this.replySocket.send(JSON.stringify({ towns: towns.map(c => c.toJson()) }));
       }
 
+      else if (request.type === 'GOVERNMENT_METRICS:GET') {
+        const metrics: GovernmentMetrics | undefined = this.caches.government.withPlanetId(request.planetId).metricsForTownId(request.townId);
+        await this.replySocket.send(JSON.stringify({ metrics: metrics?.toJson() }));
+      }
+      else if (request.type === 'GOVERNMENT_POLITICS:GET') {
+        const politics: GovernmentPolitics | undefined = this.caches.government.withPlanetId(request.planetId).politicsForTownId(request.townId);
+        await this.replySocket.send(JSON.stringify({ politics: politics?.toJson() }));
+      }
+      else if (request.type === 'GOVERNMENT_TAXES:GET') {
+        const taxes: GovernmentTaxes | undefined = this.caches.government.withPlanetId(request.planetId).taxesForTownId(request.townId);
+        await this.replySocket.send(JSON.stringify({ taxes: taxes?.toJson() }));
+      }
+
       else if (request.type === 'BOOKMARK:LIST') {
         const bookmarks: Bookmark[] = await this.stores.bookmarkByPlanet[request.planetId]?.forCorporationId(request.corporationId);
         await this.replySocket.send(JSON.stringify({ bookmarks: _.map(bookmarks, (b) => b.toJson()) }));
@@ -212,8 +257,8 @@ export default class ModelEventServer {
         this.caches.corporation.withPlanetId(request.planetId).update(corporation);
 
         await this.replySocket.send(JSON.stringify({ company: company.toJson() }))
-        await this.publisherSocket.send(['CORPORATION:UPDATE', JSON.stringify({ planetId: corporation.planetId, corporation: corporation.toJson() })])
-        await this.publisherSocket.send(['COMPANY:UPDATE', JSON.stringify({ planetId: company.planetId, company: company.toJson() })])
+        await this.publisherSocket.send(['CORPORATION:UPDATE', JSON.stringify({ planetId: request.planetId, corporation: corporation.toJson() })])
+        await this.publisherSocket.send(['COMPANY:UPDATE', JSON.stringify({ planetId: request.planetId, company: company.toJson() })])
       }
 
       else if (request.type === 'RESEARCH:SUMMARY') {
@@ -251,61 +296,56 @@ export default class ModelEventServer {
         await this.replySocket.send(JSON.stringify({ buildings: buildings.map(c => c.toJson()) }));
       }
       else if (request.type === 'BUILDING:CREATE') {
-        const building: Building = new Building(Utils.uuid(),
-          request.tycoonId,
-          request.corporationId,
-          request.companyId,
-          request.definitionId,
-          request.townId,
-          request.name ?? null,
-          request.mapX,
-          request.mapY,
-          -1,
-          this.caches.planet.withPlanetId(request.planetId).planet.time,
-          undefined
-        );
-
-        const buildingCache = this.caches.building.withPlanetId(request.planetId);
-        const definition: BuildingDefinition | null = buildingCache.buildingConfigurations.definitionById[building.definitionId];
-        const imageDefinition: BuildingImageDefinition | null = definition ? buildingCache.buildingConfigurations.imageById[definition.imageId] : null;
-        if (!definition || !imageDefinition) {
-          await this.replySocket.send(JSON.stringify({ error: 'INVALID_DEFINITION' }));
-          continue;
-        }
-
-        const summary: InventionSummary = this.caches.inventionSummary.withPlanetId(request.planetId).forCompanyId(building.companyId);
-        if (definition.requiredInventionIds.length && !definition.requiredInventionIds.every(id => summary.completedIds.has(id))) {
-          await this.replySocket.send(JSON.stringify({ error: 'MISSING_RESEARCH' }));
-          continue;
-        }
-
-        if (buildingCache.isPositionOccupied(building.mapX, building.mapY, imageDefinition.tileWidth, imageDefinition.tileHeight)) {
-          await this.replySocket.send(JSON.stringify({ error: 'POSITION_OCCUPIED' }));
-          continue;
-        }
-
-        // TODO: check roads
-        buildingCache.update(building);
-
-        await this.replySocket.send(JSON.stringify({ building: building.toJson() }));
-        await this.publisherSocket.send(['BUILDING:UPDATE', JSON.stringify({ planetId: request.planetId, building: building.toJson() })])
+        await this.buildingManager.createBuilding(request);
+      }
+      else if (request.type === 'BUILDING:RENAME') {
+        await this.buildingManager.renameBuilding(request);
+      }
+      else if (request.type === 'BUILDING:DEMOLISH') {
+        await this.buildingManager.demolishBuilding(request);
       }
 
-      else if (request.type === 'BUILDING_LABOR:LIST') {
-        const labors: BuildingLabor[] = await this.stores.buildingByPlanet[request.planetId]?.laborsForBuildingId(request.buildingId) ?? [];
-        await this.replySocket.send(JSON.stringify({ labors: labors.map(c => c.toJson()) }));
+      else if (request.type === 'BUILDING_CONSTRUCTION:LIST') {
+        const constructions: Array<BuildingConstruction> = this.caches.buildingConstruction.withPlanetId(request.planetId).all();
+        await this.replySocket.send(JSON.stringify({ constructions: constructions.map(c => c.toJson()) }));
       }
-      else if (request.type === 'BUILDING_LABOR:GET') {
-        const labor: BuildingLabor | undefined = await this.stores.buildingByPlanet[request.planetId]?.getLabor(request.id);
-        await this.replySocket.send(JSON.stringify(labor ? { labor: labor.toJson() } : {}));
+      else if (request.type === 'BUILDING_CONSTRUCTION:GET') {
+        const construction: BuildingConstruction | undefined = this.caches.buildingConstruction.withPlanetId(request.planetId).forBuildingId(request.buildingId);
+        await this.replySocket.send(JSON.stringify({ construction: construction?.toJson() }));
       }
-      else if (request.type === 'BUILDING_PRODUCT:LIST') {
-        const products: BuildingProduct[] = await this.stores.buildingByPlanet[request.planetId]?.productsForBuildingId(request.buildingId) ?? [];
-        await this.replySocket.send(JSON.stringify({ products: products.map(c => c.toJson()) }));
+
+      else if (request.type === 'BUILDING_SETTINGS:LIST') {
+        const settings: BuildingSettings[] = this.caches.buildingSettings.withPlanetId(request.planetId).all();
+        await this.replySocket.send(JSON.stringify({ settings: settings.map(s => s.toJson()) }));
       }
-      else if (request.type === 'BUILDING_PRODUCT:GET') {
-        const product: BuildingProduct | undefined = await this.stores.buildingByPlanet[request.planetId]?.getProduct(request.id);
-        await this.replySocket.send(JSON.stringify(product ? { product: product.toJson() } : {}));
+      else if (request.type === 'BUILDING_SETTINGS:GET') {
+        const settings: BuildingSettings | undefined = this.caches.buildingSettings.withPlanetId(request.planetId).forBuildingId(request.buildingId);
+        await this.replySocket.send(JSON.stringify({ settings: settings?.toJson() }));
+      }
+      else if (request.type === 'BUILDING_SETTINGS:SET') {
+        const settings: BuildingSettings = BuildingSettings.fromJson(request.settings);
+        this.caches.buildingSettings.withPlanetId(request.planetId).update(settings);
+
+        await this.replySocket.send(JSON.stringify({ settings: settings.toJson() }));
+        await this.publisherSocket.send(['BUILDING_SETTINGS:UPDATE', JSON.stringify({ planetId: request.planetId, settings: settings.toJson() })]);
+      }
+      else if (request.type === 'BUILDING_SETTINGS:CLONE') {
+        await this.buildingManager.cloneBuilding(request);
+      }
+
+      else if (request.type === 'BUILDING_METRICS:LIST') {
+        const metrics: BuildingMetrics[] = this.caches.buildingMetrics.withPlanetId(request.planetId).all();
+        await this.replySocket.send(JSON.stringify({ metrics: metrics.map(s => s.toJson()) }));
+      }
+      else if (request.type === 'BUILDING_METRICS:GET') {
+        const metrics: BuildingMetrics | undefined = this.caches.buildingMetrics.withPlanetId(request.planetId).forBuildingId(request.buildingId);
+        await this.replySocket.send(JSON.stringify({ metrics: metrics?.toJson() }));
+      }
+
+      else if (request.type === 'BUILDING_CONNECTIONS:LIST') {
+        const cache = this.caches.buildingConnection.withPlanetId(request.planetId);
+        const connections: BuildingConnection[] = request.sourceBuildingId ? cache.forSourceBuildingIdResourceId(request.sourceBuildingId, request.resourceId) : request.sinkBuildingId ? cache.forSinkBuildingIdResourceId(request.sinkBuildingId, request.resourceId) : [];
+        await this.replySocket.send(JSON.stringify({ connections: connections.map(c => c.toJson()) }));
       }
 
       else if (request.type === 'MAIL:LIST') {
@@ -364,6 +404,11 @@ export default class ModelEventServer {
           const visa: TycoonVisa | null = this.caches.tycoonVisa.forId(request.visaId);
           if (visa) {
             const updatedVisa: TycoonVisa = (_.isNumber(request.viewX) && _.isNumber(request.viewY) ? visa.withView(request.viewX, request.viewY) : visa).touch();
+
+            const tycoonSettings: TycoonSettings = this.caches.tycoonSettings.withPlanetId(updatedVisa.planetId).forTycoonId(updatedVisa.tycoonId) ?? new TycoonSettings(updatedVisa.tycoonId, 0, 0);
+            tycoonSettings.withView(updatedVisa.viewX, updatedVisa.viewY);
+            this.caches.tycoonSettings.withPlanetId(updatedVisa.planetId).update(tycoonSettings);
+
             await this.publisherSocket.send(['VISA:UPDATE', JSON.stringify({ visa: updatedVisa?.toJson() })]);
           }
         }

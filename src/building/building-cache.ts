@@ -39,12 +39,17 @@ export default class BuildingCache {
         return resolve();
       }
 
-      Promise.all(Array.from(this.dirtyIds).map(id => {
-        return this.dao.set(this.byId[id]);
+      Promise.all(Array.from(this.dirtyIds).map(async (id: string) => {
+        if (this.byId[id]) {
+          return (await this.dao.set(this.byId[id])).id;
+        }
+        else {
+          return this.dao.remove(id);
+        }
       }))
-        .then((buildings: Building[]) => {
-          for (const building of buildings) {
-            this.dirtyIds.delete(building.id);
+        .then((ids: string[]) => {
+          for (const id of ids) {
+            this.dirtyIds.delete(id);
           }
         })
         .then(resolve)
@@ -76,20 +81,48 @@ export default class BuildingCache {
     }
 
     if (!this.idsByChunkId[building.chunkId]) this.idsByChunkId[building.chunkId] = new Set();
-    this.idsByChunkId[building.chunkId].add(building.id)
+    this.idsByChunkId[building.chunkId].add(building.id);
 
     if (!this.idsByCompanyId[building.companyId]) this.idsByCompanyId[building.companyId] = new Set();
-    this.idsByCompanyId[building.companyId].add(building.id)
+    this.idsByCompanyId[building.companyId].add(building.id);
 
     if (!this.idsByTownId[building.townId]) this.idsByTownId[building.townId] = new Set();
-    this.idsByTownId[building.townId].add(building.id)
+    this.idsByTownId[building.townId].add(building.id);
 
     return building;
   }
 
-  all (): Array<Building> { return Object.values(this.byId); }
+  remove (buildingId: string): void {
+    if (this.byId[buildingId]) {
+      const building = this.byId[buildingId];
 
-  forId (buildingId: string): Building | null { return this.byId[buildingId]; }
+      const imageDefinition: BuildingImageDefinition | null = this.buildingConfigurations.imageForDefinitionId(building.definitionId);
+      if (imageDefinition) {
+        for (let y = 0; y < imageDefinition.tileHeight; y++) {
+          for (let x = 0; x < imageDefinition.tileWidth; x++) {
+            if (this.idByPositionIndex[(building.mapY - y) * this.planetWidth + (building.mapX - x)] === building.id) {
+              delete this.idByPositionIndex[(building.mapY - y) * this.planetWidth + (building.mapX - x)];
+            }
+          }
+        }
+      }
+
+      this.idsByChunkId[building.chunkId]?.delete(building.id);
+      this.idsByCompanyId[building.companyId]?.delete(building.id);
+      this.idsByTownId[building.townId]?.delete(building.id);
+
+      delete this.byId[buildingId];
+      this.dirtyIds.add(buildingId);
+    }
+  }
+
+  all (): Array<Building> {
+    return Object.values(this.byId);
+  }
+
+  forId (buildingId: string): Building | undefined {
+    return this.byId[buildingId];
+  }
   forChunk (chunkX: number, chunkY: number): Array<Building> {
     return Array.from(this.idsByChunkId[`${chunkX}x${chunkY}`] ?? []).map((id: string) => this.forId(id)).filter(b => !!b) as Building[];
   }

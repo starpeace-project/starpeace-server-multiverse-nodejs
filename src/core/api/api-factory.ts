@@ -1,5 +1,7 @@
 import express from 'express';
+import fs from 'fs-extra';
 import http from 'http';
+import https from 'https';
 import Cors from 'cors';
 import bodyParser from 'body-parser';
 import compression from 'compression';
@@ -20,7 +22,7 @@ import MetadataApi from './metadata-api.js';
 import PlanetApi from './planet-api.js';
 import TycoonApi from './tycoon-api.js';
 
-import GalaxyManager from '../galaxy-manager.js';
+import GalaxyManager, { BuildingConfigurations, CoreConfigurations, InventionConfigurations } from '../galaxy-manager.js';
 import ModelEventClient from '../events/model-event-client.js';
 import { type HttpServerCaches } from '../http-server.js';
 import CacheByPlanet from '../../planet/cache-by-planet.js';
@@ -40,6 +42,10 @@ import MapCache from '../../planet/map-cache.js';
 const DEFAULT_TIMEOUT_IN_MS = 10 * 1000;
 
 export interface ApiCaches {
+  buildingConfigurations: Record<string, BuildingConfigurations>;
+  coreConfigurations: Record<string, CoreConfigurations>;
+  inventionConfigurations: Record<string, InventionConfigurations>;
+
   tycoon: TycoonCache;
   tycoonVisa: TycoonVisaCache;
 
@@ -61,6 +67,8 @@ export default class ApiFactory {
     const app = express();
     app.use(Cors({
       origin: [/localhost\:11010/, 'https://client.starpeace.io'],
+      //preflightContinue: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH' , 'DELETE', 'OPTIONS'],
       credentials: true
     }));
     app.use(compression());
@@ -86,10 +94,28 @@ export default class ApiFactory {
       expressFormat: false
     }));
     app.use(passport.initialize());
+    app.use((req, res, next) => {
+      req.setTimeout(DEFAULT_TIMEOUT_IN_MS, () => {
+        res.sendStatus(500);
+        req.socket.end();
+      });
+      next();
+    });
     ApiFactory.configureRoutes(logger, app, galaxyManager, modelEventClient, caches);
 
+    if (galaxyManager.galaxyMetadata.settings?.privateKeyPath && galaxyManager.galaxyMetadata.settings?.certificatePath) {
+      if (fs.existsSync(galaxyManager.galaxyMetadata.settings.privateKeyPath) && fs.existsSync(galaxyManager.galaxyMetadata.settings.certificatePath)) {
+        const server: http.Server = https.createServer({
+          key: fs.readFileSync(galaxyManager.galaxyMetadata.settings.privateKeyPath),
+          cert: fs.readFileSync(galaxyManager.galaxyMetadata.settings.certificatePath),
+        }, app);
+        server.setTimeout(DEFAULT_TIMEOUT_IN_MS); // doesn't actually interrupt request
+        return server;
+      }
+    }
+
     const server: http.Server = http.createServer(app);
-    server.setTimeout(DEFAULT_TIMEOUT_IN_MS);
+    server.setTimeout(DEFAULT_TIMEOUT_IN_MS); // doesn't actually interrupt request
     return server;
   }
 
@@ -180,6 +206,10 @@ export default class ApiFactory {
     app.post('/buildings', authenticate, verifyPlanet, verifyTycoon, buildingApi.createBuilding());
     app.get('/buildings/:buildingId', authenticate, verifyPlanet, verifyVisa, buildingApi.getBuilding());
     app.get('/buildings/:buildingId/details', authenticate, verifyPlanet, verifyVisa, buildingApi.getBuildingDetails());
+    app.patch('/buildings/:buildingId/details', authenticate, verifyPlanet, verifyTycoon, buildingApi.setBuildingDetails());
+    app.post('/buildings/:buildingId/demolish', authenticate, verifyPlanet, verifyTycoon, buildingApi.demolishBuilding());
+    app.post('/buildings/:buildingId/clone', authenticate, verifyPlanet, verifyTycoon, buildingApi.cloneBuilding());
+    app.get('/buildings/:buildingId/connections', authenticate, verifyPlanet, verifyVisa, buildingApi.getBuildingConnections());
 
     app.get('/corporations', authenticate, verifyPlanet, verifyVisa, corporationApi.getPlanetCorporations());
     app.post('/corporations', authenticate, verifyPlanet, verifyTycoon, corporationApi.createCorporation());
@@ -217,8 +247,6 @@ export default class ApiFactory {
     app.get('/towns/:townId/buildings', authenticate, verifyPlanet, verifyVisa, buildingApi.getTownBuildings());
     app.get('/towns/:townId/companies', authenticate, verifyPlanet, verifyVisa, companyApi.getTownCompanies());
     app.get('/towns/:townId/details', authenticate, verifyPlanet, verifyVisa, planetApi.getTownDetails());
-
-
   }
 
 }

@@ -10,14 +10,8 @@ export class ConnectionInformation {
 export class ConnectionState {
   running: boolean = false;
 
-  openConnectionsByRemoteKey: Record<string, netSocket>;
-  tycoonIdsByOpenSocketId: Record<string, string>;
-
-
-  constructor () {
-    this.openConnectionsByRemoteKey = {};
-    this.tycoonIdsByOpenSocketId = {};
-  }
+  openConnectionsByRemoteKey: Record<string, netSocket> = {};
+  tycoonIdsByOpenSocketId: Record<string, string> = {};
 
   handleConnection (connection: netSocket): void {
     if (!this.running) {
@@ -39,7 +33,6 @@ export class ConnectionState {
       delete this.tycoonIdsByOpenSocketId[socketId];
     }
   }
-
 }
 
 export default class ConnectionManager {

@@ -1,8 +1,22 @@
 import _ from 'lodash';
 import { DateTime } from 'luxon';
 
-// import BuildingDefinition from './building-definition';
-// import SimulationDefinition from './simulation/simulation-definition';
+export interface BuildingParameters {
+  id: string;
+  tycoonId: string;
+  corporationId: string;
+  companyId: string;
+  definitionId: string;
+  townId: string;
+  name: string | undefined;
+  mapX: number;
+  mapY: number;
+  level: number;
+  upgrading: boolean;
+  constructionStartedAt: DateTime | undefined;
+  constructionFinishedAt: DateTime | undefined;
+  condemnedAt: DateTime | undefined;
+}
 
 export default class Building {
   id: string;
@@ -13,33 +27,36 @@ export default class Building {
   definitionId: string;
   townId: string;
 
-  name: string | null;
+  name: string | undefined;
   mapX: number;
   mapY: number;
-  stage: number;
 
-  constructionStartedAt: DateTime;
+  level: number;
+  upgrading: boolean;
+  constructionStartedAt: DateTime | undefined;
   constructionFinishedAt: DateTime | undefined;
 
-  // pullInputs: Array;
-  // pullOutputs: Array;
+  condemnedAt: DateTime | undefined;
 
-  // pushOutputs: Array;
+  constructor (parameters: BuildingParameters) {
+    this.id = parameters.id;
+    this.tycoonId = parameters.tycoonId;
+    this.corporationId = parameters.corporationId;
+    this.companyId = parameters.companyId;
+    this.definitionId = parameters.definitionId;
+    this.townId = parameters.townId;
+    this.name = parameters.name;
+    this.mapX = parameters.mapX;
+    this.mapY = parameters.mapY;
+    this.level = parameters.level;
+    this.upgrading = parameters.upgrading;
+    this.constructionStartedAt = parameters.constructionStartedAt;
+    this.constructionFinishedAt = parameters.constructionFinishedAt;
+    this.condemnedAt = parameters.condemnedAt;
+  }
 
-
-  constructor (id: string, tycoonId: string, corporationId: string, companyId: string, definitionId: string, townId: string, name: string | null, mapX: number, mapY: number, stage: number, constructionStartedAt: DateTime, constructionFinishedAt: DateTime | undefined) {
-    this.id = id;
-    this.tycoonId = tycoonId;
-    this.corporationId = corporationId;
-    this.companyId = companyId;
-    this.definitionId = definitionId;
-    this.townId = townId;
-    this.name = name;
-    this.mapX = mapX;
-    this.mapY = mapY;
-    this.stage = stage;
-    this.constructionStartedAt = constructionStartedAt;
-    this.constructionFinishedAt = constructionFinishedAt;
+  get constructed (): boolean {
+    return !!this.constructionFinishedAt;
   }
 
   get chunkX (): number {
@@ -50,45 +67,6 @@ export default class Building {
   }
   get chunkId (): string {
     return `${this.chunkX}x${this.chunkY}`;
-  }
-
-  pullInputs ()  {
-    // let capacity = 0;
-    // // if (noMoney) capacity = 0;
-
-    // for (let connection of []) { // inputs
-    //   connection.sinkCapacity = capacity;
-    //   connection.velocity = Math.min(capacity, connection.sourceCapacity);
-
-    //   if (connection.velocity > 0) {
-    //     // lower source storage
-    //     // raise sink storage, with quality
-    //     // raise source money
-    //     // lower sink money
-    //     capacity -= connection.velocity;
-    //   }
-    // }
-  }
-
-  doAction () {
-    // let sinkCapacity: number = 0
-    // for (let connection of []) { // outputs
-    //   sinkCapacity += connection.sinkCapacity;
-    // }
-
-    // let freeSpace: number = 0;
-    // let maxVelocity: number = 0;
-    // let capacity: number = _.min([freeSpace, sinkCapacity, maxVelocity]);
-
-    // for (let connection of []) { // outputs
-    //   connection.sourceCapacity = capacity
-    //   connection.resourceQuality = 0
-
-    //   let velocity = Math.min(capacity, connection.sinkCapacity)
-    //   if (velocity > 0) {
-    //     capacity -= velocity;
-    //   }
-    // }
   }
 
   toJson (): any {
@@ -102,27 +80,31 @@ export default class Building {
       name: this.name,
       mapX: this.mapX,
       mapY: this.mapY,
-      stage: this.stage,
-      constructionStartedAt: this.constructionStartedAt.toISO(),
-      constructionFinishedAt: this.constructionFinishedAt?.toISO()
+      level: this.level,
+      upgrading: this.upgrading,
+      constructionStartedAt: this.constructionStartedAt?.toISO(),
+      constructionFinishedAt: this.constructionFinishedAt?.toISO(),
+      condemnedAt: this.condemnedAt?.toISO()
     };
   }
 
   static fromJson (json: any): Building {
-    return new Building(
-      json.id,
-      json.tycoonId,
-      json.corporationId,
-      json.companyId,
-      json.definitionId,
-      json.townId,
-      json.name ?? null,
-      json.mapX,
-      json.mapY,
-      json.stage ?? 0,
-      DateTime.fromISO(json.constructionStartedAt),
-      json.constructionFinishedAt ? DateTime.fromISO(json.constructionFinishedAt) : undefined,
-    );
+    return new Building({
+      id: json.id,
+      tycoonId: json.tycoonId,
+      corporationId: json.corporationId,
+      companyId: json.companyId,
+      definitionId: json.definitionId,
+      townId: json.townId,
+      name: json.name ?? undefined,
+      mapX: json.mapX,
+      mapY: json.mapY,
+      level: json.level,
+      upgrading: json.upgrading,
+      constructionStartedAt: json.constructionStartedAt ? DateTime.fromISO(json.constructionStartedAt) : undefined,
+      constructionFinishedAt: json.constructionFinishedAt ? DateTime.fromISO(json.constructionFinishedAt) : undefined,
+      condemnedAt: json.condemnedAt ? DateTime.fromISO(json.condemnedAt) : undefined
+    });
   }
 
 }

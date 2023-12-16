@@ -59,9 +59,13 @@ export default class CompanyCache {
     return company;
   }
 
-  all (): Array<Company> { return Object.values(this.byId); }
+  all (): Array<Company> {
+    return Object.values(this.byId);
+  }
 
-  forId (companyId: string): Company | null { return this.byId[companyId]; }
+  forId (companyId: string): Company | undefined {
+    return this.byId[companyId] ?? undefined;
+  }
   forCorporationId (corporationId: string): Array<Company> {
     return Array.from(this.idsByCorporationId[corporationId] ?? []).map((id: string) => this.forId(id)).filter(c => !!c) as Company[];
   }
@@ -79,9 +83,4 @@ export default class CompanyCache {
     return companyOrCompanys;
   }
 
-  updateCashflow (companyId: string, cashflow: number): Company | null {
-    const company: Company | null = this.forId(companyId)?.withCashflow(cashflow) ?? null;
-    if (company) this.dirtyIds.add(companyId);
-    return company;
-  }
 }

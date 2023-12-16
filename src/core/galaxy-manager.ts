@@ -2,8 +2,35 @@ import _ from 'lodash';
 import fs from 'fs';
 import winston from 'winston';
 
-import { BuildingDefinition, BuildingImageDefinition, CityZone, CompanySeal, IndustryCategory, IndustryType, InventionDefinition, Level, ResourceType, ResourceUnit, SimulationDefinition, SimulationDefinitionParser } from '@starpeace/starpeace-assets-types';
+import {
+  BuildingDefinition,
+  BuildingImageDefinition,
+  CityZone,
+  CompanySeal,
+  IndustryCategory,
+  IndustryType,
+  InventionDefinition,
+  Level,
+  ResidenceDefinition,
+  ResourceType,
+  ResourceUnit,
+  ResourceVelocity,
+  ResourceVelocityWeighted,
+  SimulationDefinition,
+  SimulationDefinitionParser,
+  StorageQuantity,
+  isSimulationWithInputs,
+  isSimulationWithLabor,
+  isSimulationWithOperations,
+  isSimulationWithOutputs,
+  isSimulationWithStorage
+} from '@starpeace/starpeace-assets-types';
 
+export interface GalaxySettings {
+  port: number;
+  privateKeyPath?: string | undefined;
+  certificatePath?: string | undefined;
+}
 
 export interface GalaxyMetadata {
   id: string;
@@ -13,6 +40,7 @@ export interface GalaxyMetadata {
   tycoonCreationEnabled: boolean;
   tycoonAuthentication: string;
   secretHash: string;
+  settings: GalaxySettings;
 }
 
 export interface PlanetMetadata {
@@ -35,14 +63,66 @@ export class BuildingConfigurations {
   imageById: Record<string, BuildingImageDefinition>;
   simulationById: Record<string, SimulationDefinition>;
 
+  serviceResourceIdsBySealId: Record<string, Set<string>> = {};
+
+  inputByDefinitionResourceId: Record<string, Record<string, ResourceVelocityWeighted>> = {};
+  laborByDefinitionResourceId: Record<string, Record<string, ResourceVelocityWeighted>> = {};
+  outputByDefinitionResourceId: Record<string, Record<string, ResourceVelocity>> = {};
+  rentByDefinitionResourceId: Record<string, Record<string, ResourceVelocity>> = {};
+  serviceByDefinitionResourceId: Record<string, Record<string, ResourceVelocityWeighted>> = {};
+  storageByDefinitionResourceId: Record<string, Record<string, StorageQuantity>> = {};
+
   constructor (definitions: Array<BuildingDefinition>, imageDefinitions: Array<BuildingImageDefinition>, simulationDefinitions: Array<SimulationDefinition>) {
     this.definitions = definitions;
     this.imageDefinitions = imageDefinitions;
     this.simulationDefinitions = simulationDefinitions;
 
-    this.definitionById = Object.fromEntries((definitions || []).map(d => [d.id, d]));
-    this.imageById = Object.fromEntries((imageDefinitions || []).map(d => [d.id, d]));
-    this.simulationById = Object.fromEntries((simulationDefinitions || []).map(d => [d.id, d]));
+    this.definitionById = Object.fromEntries((definitions ?? []).map(d => [d.id, d]));
+    this.imageById = Object.fromEntries((imageDefinitions ?? []).map(d => [d.id, d]));
+    this.simulationById = Object.fromEntries((simulationDefinitions ?? []).map(d => [d.id, d]));
+
+    for (const simulation of simulationDefinitions) {
+      if (isSimulationWithInputs(simulation)) {
+        this.inputByDefinitionResourceId[simulation.id] = {};
+        for (const input of simulation.inputs) {
+          this.inputByDefinitionResourceId[simulation.id][input.resourceId] = input;
+        }
+      }
+      if (isSimulationWithLabor(simulation)) {
+        this.laborByDefinitionResourceId[simulation.id] = {};
+        for (const job of simulation.labor) {
+          this.laborByDefinitionResourceId[simulation.id][job.resourceId] = job;
+        }
+      }
+      if (isSimulationWithOperations(simulation)) {
+        this.serviceByDefinitionResourceId[simulation.id] = {};
+        for (const operation of simulation.operations) {
+          this.serviceByDefinitionResourceId[simulation.id][operation.resourceId] = operation;
+
+          const sealId = this.definitionById[simulation.id].sealId;
+          if (!this.serviceResourceIdsBySealId[sealId]) {
+            this.serviceResourceIdsBySealId[sealId] = new Set<string>();
+          }
+          this.serviceResourceIdsBySealId[sealId].add(operation.resourceId);
+        }
+      }
+      if (isSimulationWithOutputs(simulation)) {
+        this.outputByDefinitionResourceId[simulation.id] = {};
+        for (const output of simulation.outputs) {
+          this.outputByDefinitionResourceId[simulation.id][output.resourceId] = output;
+        }
+      }
+      if (simulation instanceof ResidenceDefinition) {
+        this.rentByDefinitionResourceId[simulation.id] = {};
+        this.rentByDefinitionResourceId[simulation.id][simulation.residentType] = new ResourceVelocity(simulation.residentType, undefined, simulation.capacity);
+      }
+      if (isSimulationWithStorage(simulation)) {
+        this.storageByDefinitionResourceId[simulation.id] = {};
+        for (const storage of simulation.storage) {
+          this.storageByDefinitionResourceId[simulation.id][storage.resourceId] = storage;
+        }
+      }
+    }
   }
 
   imageForDefinitionId (definitionId: string): BuildingImageDefinition | null {
@@ -67,7 +147,8 @@ export class CoreConfigurations {
   resourceUnits: Array<ResourceUnit>;
   seals: Array<CompanySeal>;
 
-  sealsById: Record<string, CompanySeal>;
+  resourceTypeById: Record<string, ResourceType>;
+  sealById: Record<string, CompanySeal>;
 
   constructor (cityZones: Array<CityZone>, industryCategories: Array<IndustryCategory>, industryTypes: Array<IndustryType>, levels: Array<Level>, rankingTypes: any, resourceTypes: Array<ResourceType>, resourceUnits: Array<ResourceUnit>, seals: Array<CompanySeal>) {
     this.cityZones = cityZones;
@@ -79,10 +160,17 @@ export class CoreConfigurations {
     this.resourceUnits = resourceUnits;
     this.seals = seals;
 
-    this.sealsById = Object.fromEntries((seals || []).map(s => [s.id, s]));
+    this.resourceTypeById = Object.fromEntries((resourceTypes ?? []).map(s => [s.id, s]));
+    this.sealById = Object.fromEntries((seals ?? []).map(s => [s.id, s]));
   }
 
-  get lowestLevel (): Level | null { return _.first(_.orderBy(this.levels, ['level'], ['asc'])) ?? null; }
+  get lowestLevel (): Level | null {
+    return _.first(_.orderBy(this.levels, ['level'], ['asc'])) ?? null;
+  }
+
+  resourcePrice (resourceId: string): number {
+    return this.resourceTypeById[resourceId]?.price ?? 0;
+  }
 
   toJson (): any {
     return {
@@ -92,7 +180,7 @@ export class CoreConfigurations {
       levels: this.levels.map(l => l.toJson()),
       rankingTypes: this.rankingTypes,
       resourceTypes: this.resourceTypes.map(r => r.toJson()),
-      resourceUnits: this.resourceUnits,
+      resourceUnits: this.resourceUnits.map(r => r.toJson()),
       seals: this.seals.map(s => s.toJson())
     };
   }
@@ -132,8 +220,12 @@ export default class GalaxyManager {
     this.configurationsByPlanetId = configurationsByPlanetId;
   }
 
-  get planets (): PlanetMetadata[] { return Object.values(this.planetMetadataById); }
-  get secret (): string { return this.galaxyMetadata.secretHash; }
+  get planets (): PlanetMetadata[] {
+    return Object.values(this.planetMetadataById);
+  }
+  get secret (): string {
+    return this.galaxyMetadata.secretHash;
+  }
 
   forPlanet (planetId: string): PlanetMetadata | null { return this.planetMetadataById[planetId]; }
   forPlanetRequired (planetId: string): PlanetMetadata {

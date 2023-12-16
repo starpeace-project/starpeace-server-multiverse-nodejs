@@ -13,6 +13,7 @@ import Town from '../../planet/town.js';
 
 import Utils from '../../utils/utils.js';
 import CorporationCache from '../../corporation/corporation-cache.js';
+import TycoonSettings from '../../tycoon/settings/tycoon-settings.js';
 
 
 export default class PlanetApi {
@@ -33,29 +34,29 @@ export default class PlanetApi {
       const isVisitor: boolean = req.body.identityType == 'visitor';
       const isTycoon: boolean = req.body.identityType == 'tycoon';
 
-      if (!isVisitor && !isTycoon) return res.status(400).json({});
-      if (isVisitor && !this.galaxyManager.galaxyMetadata.visitorEnabled) return res.status(400).json({});
-      if (isTycoon && !this.galaxyManager.galaxyMetadata.tycoonEnabled) return res.status(400).json({});
-      if (isTycoon && !req.isAuthenticated()) return res.status(401).json({});
-      if (!req.planet) return res.status(400).json({});
+      if (!isVisitor && !isTycoon) return res.sendStatus(400);
+      if (isVisitor && !this.galaxyManager.galaxyMetadata.visitorEnabled) return res.sendStatus(400);
+      if (isTycoon && !this.galaxyManager.galaxyMetadata.tycoonEnabled) return res.sendStatus(400);
+      if (isTycoon && !req.isAuthenticated()) return res.sendStatus(401);
+      if (!req.planet) return res.sendStatus(400);
 
       try {
         const tycoonId: string = isTycoon ? (<Tycoon> req.user).id : 'random-visitor';
-        const corporation: Corporation | null = isTycoon ? this.caches.corporation.withPlanet(req.planet).forTycoonId(tycoonId) : null;
+        const corporation: Corporation | undefined = isTycoon ? this.caches.corporation.withPlanet(req.planet).forTycoonId(tycoonId) : undefined;
 
+        const tycoonSettings: TycoonSettings | undefined = isTycoon ? (await this.modelEventClient.getTycoonSettings(req.planet.id, tycoonId)) : undefined;
         const towns: Town[] = this.caches.town.withPlanet(req.planet).all() ?? [];
         const town: Town | null = towns.length ? towns[Math.floor(Math.random() * towns.length)] : null;
-        // TODO: initialize to headquarters (or save to tycoon planet-specific metadata?)
-        const viewX: number = town?.mapX ?? 500;
-        const viewY: number = town?.mapY ?? 500;
+        const viewX: number = tycoonSettings?.viewX ?? town?.mapX ?? 500;
+        const viewY: number = tycoonSettings?.viewY ?? town?.mapY ?? 500;
 
         const visa: TycoonVisa = await this.modelEventClient.saveVisa(new TycoonVisa(Utils.uuid(), req.body.identityType, tycoonId, req.planet.id, corporation?.id, new Date().getTime() + VISA_IDLE_EXPIRATION_IN_MS, viewX, viewY));
-        if (!visa) return res.status(500).json({});
+        if (!visa) return res.sendStatus(500);
         return res.json(visa.toJson());
       }
       catch (err) {
         this.logger.error(err);
-        return res.status(500).json({});
+        return res.sendStatus(500);
       }
     };
   }
@@ -79,7 +80,7 @@ export default class PlanetApi {
       }
       catch (err) {
         this.logger.error(err);
-        return res.status(500);
+        return res.sendStatus(500);
       }
     };
   }
@@ -98,56 +99,66 @@ export default class PlanetApi {
       }
       catch (err) {
         this.logger.error(err);
-        return res.status(500);
+        return res.sendStatus(500);
       }
     };
   }
 
   getPlanetDetails (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
-      if (!req.planet) return res.status(400);
+      if (!req.planet) return res.sendStatus(400);
 
-      // FIXME: TODO: hookup details
+      const [metrics, politics, taxes] = await Promise.all([
+        this.modelEventClient.governmentMetricsForTownId(req.planet.id, 'PLANET'),
+        this.modelEventClient.governmentPoliticsForTownId(req.planet.id, 'PLANET'),
+        this.modelEventClient.governmentTaxesForTownId(req.planet.id, 'PLANET')
+      ]);
+
       return res.json({
         id: req.planet.id,
-        qol: 0,
-        services: [],
-        commerce: [],
-        taxes: [],
-        population: [],
-        employment: [],
-        housing: [],
-        currentTerm: { },
-        nextTerm: { }
+        qol: metrics?.qualityOfLife,
+        services: (metrics?.services ?? []).map(s => s.toJson()),
+        commerce: (metrics?.commerce ?? []).map(c => c.toJson()),
+        taxes: (taxes?.taxes ?? []).map(t => t.toJson()),
+        population: (metrics?.population ?? []).map(p => p.toJson()),
+        employment: (metrics?.employment ?? []).map(e => e.toJson()),
+        housing: (metrics?.housing ?? []).map(h => h.toJson()),
+        currentTerm: politics?.currentTerm?.toJson(),
+        nextTerm: politics?.nextTerm?.toJson()
       });
     };
   }
 
   getTownDetails (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
-      if (!req.planet || !req.params.townId) return res.status(400);
+      if (!req.planet || !req.params.townId) return res.sendStatus(400);
 
       try {
         const town: Town | null = this.caches.town.withPlanet(req.planet).forId(req.params.townId);
-        if (!town) return res.status(404);
+        if (!town) return res.sendStatus(404);
 
-        // FIXME: TODO: hookup details
+        const [metrics, politics, taxes] = await Promise.all([
+          this.modelEventClient.governmentMetricsForTownId(req.planet.id, town.id),
+          this.modelEventClient.governmentPoliticsForTownId(req.planet.id, town.id),
+          this.modelEventClient.governmentTaxesForTownId(req.planet.id, town.id)
+        ]);
+
         return res.json({
           id: req.params.townId,
-          qol: 0,
-          services: [],
-          commerce: [],
-          taxes: [],
-          population: [],
-          employment: [],
-          housing: [],
-          currentTerm: { },
-          nextTerm: { }
+          qol: metrics?.qualityOfLife,
+          services: (metrics?.services ?? []).map(s => s.toJson()),
+          commerce: (metrics?.commerce ?? []).map(c => c.toJson()),
+          taxes: (taxes?.taxes ?? []).map(t => t.toJson()),
+          population: (metrics?.population ?? []).map(p => p.toJson()),
+          employment: (metrics?.employment ?? []).map(e => e.toJson()),
+          housing: (metrics?.housing ?? []).map(h => h.toJson()),
+          currentTerm: politics?.currentTerm?.toJson(),
+          nextTerm: politics?.nextTerm?.toJson()
         });
       }
       catch (err) {
         this.logger.error(err);
-        return res.status(500);
+        return res.sendStatus(500);
       }
     };
   }
@@ -155,14 +166,14 @@ export default class PlanetApi {
 
   getOnline (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
-      if (!req.planet) return res.status(400);
+      if (!req.planet) return res.sendStatus(400);
 
       try {
         const corporationCache: CorporationCache = this.caches.corporation.withPlanet(req.planet);
         const onlineVisas: TycoonVisa[] = this.caches.tycoonVisa.forPlanetId(req.planet.id);
         return res.json(onlineVisas.map((visa: TycoonVisa) => {
           const tycoon: Tycoon | null = visa.isTycoon ? this.caches.tycoon.forId(visa.tycoonId) : null;
-          const corporation: Corporation | null = tycoon && visa.corporationId ? corporationCache.forId(visa.corporationId) : null;
+          const corporation: Corporation | undefined = tycoon && visa.corporationId ? corporationCache.forId(visa.corporationId) : undefined;
           const item: Record<string, string> = {
             type: visa.type
           };
@@ -181,14 +192,14 @@ export default class PlanetApi {
       }
       catch (err) {
         this.logger.error(err);
-        return res.status(500);
+        return res.sendStatus(500);
       }
     };
   }
 
   getOverlay (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
-      if (!req.planet) return res.status(400);
+      if (!req.planet) return res.sendStatus(400);
 
       // TODO: verify typeId is allowed, else 404
 
@@ -199,14 +210,14 @@ export default class PlanetApi {
       }
       catch (err) {
         this.logger.error(err);
-        return res.status(500);
+        return res.sendStatus(500);
       }
     };
   }
 
   getRoads (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
-      if (!req.planet) return res.status(400);
+      if (!req.planet) return res.sendStatus(400);
 
       try {
         const data: Uint8Array = new Uint8Array(20 * 20 * .5);
@@ -214,21 +225,21 @@ export default class PlanetApi {
       }
       catch (err) {
         this.logger.error(err);
-        return res.status(500);
+        return res.sendStatus(500);
       }
     };
   }
 
   getRankings (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
-      if (!req.planet || !req.params.rankingTypeId) return res.status(400);
+      if (!req.planet || !req.params.rankingTypeId) return res.sendStatus(400);
 
       try {
         const corporationCache: CorporationCache = this.caches.corporation.withPlanet(req.planet);
         const rankings: Rankings | null = this.caches.rankings.withPlanet(req.planet).forTypeId(req.params.rankingTypeId);
         return res.json((rankings?.rankings ?? []).map(ranking => {
           const tycoon: Tycoon | null = this.caches.tycoon.forId(ranking.tycoonId);
-          const corporation: Corporation | null = corporationCache.forId(ranking.corporationId);
+          const corporation: Corporation | undefined = corporationCache.forId(ranking.corporationId);
           if (!tycoon || !corporation) return null;
           return {
             rank: ranking.rank,
@@ -242,14 +253,14 @@ export default class PlanetApi {
       }
       catch (err) {
         this.logger.error(err);
-        return res.status(500);
+        return res.sendStatus(500);
       }
     };
   }
 
   getTowns (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
-      if (!req.planet) return res.status(400);
+      if (!req.planet) return res.sendStatus(400);
 
       try {
         const towns: Town[] = this.caches.town.withPlanet(req.planet).all() ?? [];
@@ -257,7 +268,7 @@ export default class PlanetApi {
       }
       catch (err) {
         this.logger.error(err);
-        return res.status(500);
+        return res.sendStatus(500);
       }
     };
   }
