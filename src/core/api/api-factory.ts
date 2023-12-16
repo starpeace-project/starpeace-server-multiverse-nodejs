@@ -105,12 +105,16 @@ export default class ApiFactory {
 
     if (galaxyManager.galaxyMetadata.settings?.privateKeyPath && galaxyManager.galaxyMetadata.settings?.certificatePath) {
       if (fs.existsSync(galaxyManager.galaxyMetadata.settings.privateKeyPath) && fs.existsSync(galaxyManager.galaxyMetadata.settings.certificatePath)) {
+        logger.info('Attempting to start with SSL and https');
         const server: http.Server = https.createServer({
           key: fs.readFileSync(galaxyManager.galaxyMetadata.settings.privateKeyPath),
           cert: fs.readFileSync(galaxyManager.galaxyMetadata.settings.certificatePath),
         }, app);
         server.setTimeout(DEFAULT_TIMEOUT_IN_MS); // doesn't actually interrupt request
         return server;
+      }
+      else {
+        logger.warn('Unable to find SSL files, starting up with http');
       }
     }
 
