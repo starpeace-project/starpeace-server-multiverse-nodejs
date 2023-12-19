@@ -43,6 +43,7 @@ export default class PlanetApi {
       try {
         const tycoonId: string = isTycoon ? (<Tycoon> req.user).id : 'random-visitor';
         const corporation: Corporation | undefined = isTycoon ? this.caches.corporation.withPlanet(req.planet).forTycoonId(tycoonId) : undefined;
+        if (corporation && !!corporation.bannedAt) return res.sendStatus(400);
 
         const tycoonSettings: TycoonSettings | undefined = isTycoon ? (await this.modelEventClient.getTycoonSettings(req.planet.id, tycoonId)) : undefined;
         const towns: Town[] = this.caches.town.withPlanet(req.planet).all() ?? [];

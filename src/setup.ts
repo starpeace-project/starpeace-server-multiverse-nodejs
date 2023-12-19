@@ -1,5 +1,7 @@
 import _ from 'lodash';
 import fs from 'fs-extra';
+import { hash } from 'bcrypt';
+import inquirer from 'inquirer';
 import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import winston from 'winston';
@@ -9,8 +11,10 @@ import { BuildingDefinition, BuildingImageDefinition, CityZone, CompanySeal, Ind
 import Logger from './utils/logger.js';
 import FileUtils from './utils/file-utils.js';
 import Utils from './utils/utils.js';
+import TycoonStore from './tycoon/tycoon-store.js';
 import SetupPlanet from './setup/setup-planet.js';
 import { type GalaxyMetadata, type PlanetMetadata } from './core/galaxy-manager.js';
+import Tycoon from './tycoon/tycoon.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -36,20 +40,6 @@ export interface SetupConfigurations {
   seals: CompanySeal[];
 }
 
-// const determineAction = async () => {
-//   return await inquirer.prompt([
-//     {
-//       type: 'rawlist',
-//       name: 'action',
-//       message: 'What do you want to do?',
-//       choices: [
-//         'Add planet',
-//         'Remove planet',
-//         'Exit'
-//       ]
-//     }
-//   ])
-// }
 
 const logger = winston.createLogger({
   transports: [new winston.transports.Console({
@@ -95,7 +85,7 @@ const loadConfigurations = async (): Promise<{ configurations: SetupConfiguratio
   };
 }
 
-const setupConfiguration = async ({ configurations }: any): Promise<{ configurations: SetupConfigurations, galaxyMetadata: GalaxyMetadata }> => {
+const setupConfiguration = async ({ configurations }: any): Promise<any> => {
   if (!fs.existsSync('logs')) {
     fs.mkdirSync('logs', { recursive: true });
   }
@@ -126,9 +116,57 @@ const setupConfiguration = async ({ configurations }: any): Promise<{ configurat
         "certificatePath": "./galaxy/ssl/certificate.pem"
       }
     };
-    fs.writeFileSync('./galaxy/galaxy.config.json', JSON.stringify(galaxyMetadata))
-    return { configurations, galaxyMetadata };
+
+    const answers = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'username',
+        message: 'Please enter a username for Admin account'
+      },
+      {
+        type: 'password',
+        name: 'password1',
+        message: 'Please enter a password for Admin account'
+      },
+      {
+        type: 'password',
+        name: 'password2',
+        message: 'Please confirm password for Admin account'
+      }
+    ]);
+
+    if (answers.password1 !== answers.password2) {
+      console.error("Admin passwords don't match");
+      process.exit(1);
+    }
+
+    fs.writeFileSync('./galaxy/galaxy.config.json', JSON.stringify(galaxyMetadata, null, 2));
+    return { configurations, galaxyMetadata, admin: { username: answers.username, password: answers.password1 } };
   }
+};
+
+const setupAdmin = async ({ configurations, galaxyMetadata, admin }: any): Promise<any> => {
+  if (admin) {
+    const passwordHash: string = await new Promise((resolve, reject) => {
+      hash(admin.password, 10, (err: Error | undefined, pwHash: string) => {
+        if (err) return reject(err);
+        resolve(pwHash);
+      });
+    });
+
+    const store = new TycoonStore(false);
+    store.set(new Tycoon({
+      id: Utils.uuid(),
+      username: admin.username,
+      name: admin.username,
+      passwordHash: passwordHash,
+      admin: true,
+      gameMaster: false
+    }));
+    store.close();
+  }
+
+  return { configurations, galaxyMetadata };
 };
 
 const loadPlanets = async ({ configurations, galaxyMetadata }: any): Promise<{ configurations: SetupConfigurations, galaxyMetadata: GalaxyMetadata, planets: PlanetMetadata[] }> => {
@@ -145,6 +183,7 @@ const loadPlanets = async ({ configurations, galaxyMetadata }: any): Promise<{ c
 
 loadConfigurations()
   .then(setupConfiguration)
+  .then(setupAdmin)
   .then(loadPlanets)
   .then(async ({ configurations, galaxyMetadata, planets }: any) => {
     if (!planets.length) {

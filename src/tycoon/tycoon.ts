@@ -1,4 +1,18 @@
+import { DateTime } from "luxon";
 
+export interface TycoonParameters {
+  id: string;
+  username: string;
+  name: string;
+  passwordHash: string;
+
+  admin?: boolean | undefined;
+  gameMaster?: boolean | undefined;
+
+  bannedAt?: DateTime | undefined;
+  bannedBy?: string | undefined;
+  bannedReason?: string | undefined;
+}
 
 export default class Tycoon {
   id: string;
@@ -6,11 +20,23 @@ export default class Tycoon {
   name: string;
   passwordHash: string;
 
-  constructor (id: string, username: string, name: string, passwordHash: string) {
-    this.id = id;
-    this.username = username;
-    this.name = name;
-    this.passwordHash = passwordHash;
+  admin: boolean;
+  gameMaster: boolean;
+
+  bannedAt: DateTime | undefined;
+  bannedBy: string | undefined;
+  bannedReason: string | undefined;
+
+  constructor (parameters: TycoonParameters) {
+    this.id = parameters.id;
+    this.username = parameters.username;
+    this.name = parameters.name;
+    this.passwordHash = parameters.passwordHash;
+    this.admin = parameters.admin ?? false;
+    this.gameMaster = parameters.gameMaster ?? false;
+    this.bannedAt = parameters.bannedAt;
+    this.bannedBy = parameters.bannedBy;
+    this.bannedReason = parameters.bannedReason;
   }
 
   toJson () {
@@ -18,16 +44,26 @@ export default class Tycoon {
       id: this.id,
       username: this.username,
       name: this.name,
-      passwordHash: this.passwordHash
+      passwordHash: this.passwordHash,
+      admin: this.admin,
+      gameMaster: this.gameMaster,
+      bannedAt: this.bannedAt,
+      bannedBy: this.bannedBy,
+      bannedReason: this.bannedReason
     };
   }
 
   static fromJson (json: any): Tycoon {
-    return new Tycoon(
-      json.id,
-      json.username,
-      json.name,
-      json.passwordHash
-    );
+    return new Tycoon({
+      id: json.id,
+      username: json.username,
+      name: json.name,
+      passwordHash: json.passwordHash,
+      admin: json.admin,
+      gameMaster: json.gameMaster,
+      bannedAt: json.bannedAt,
+      bannedBy: json.bannedBy,
+      bannedReason: json.bannedReason
+    });
   }
 }

@@ -35,7 +35,9 @@ export default class TycoonApi {
         return res.json({
           id: tycoon.id,
           username: tycoon.username,
-          name: tycoon.name
+          name: tycoon.name,
+          admin: tycoon.admin,
+          gameMaster: tycoon.gameMaster
         });
       }
       catch (err) {

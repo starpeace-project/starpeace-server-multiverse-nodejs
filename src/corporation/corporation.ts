@@ -10,6 +10,7 @@ export interface CorporationParameters {
   planetId: string;
   name: string;
   levelId: string;
+  bannedAt?: DateTime | undefined;
   lastMailAt?: DateTime | undefined;
   buildingCount: number;
   companyIds: Set<string>;
@@ -24,6 +25,8 @@ export default class Corporation {
 
   name: string;
   levelId: string;
+
+  bannedAt: DateTime | undefined;
 
   lastMailAt: DateTime | undefined;
   buildingCount: number; // FIXME: TODO: can remove?
@@ -40,6 +43,7 @@ export default class Corporation {
     this.planetId = parameters.planetId;
     this.name = parameters.name;
     this.levelId = parameters.levelId;
+    this.bannedAt = parameters.bannedAt;
     this.lastMailAt = parameters.lastMailAt;
     this.buildingCount = parameters.buildingCount;
     this.companyIds = parameters.companyIds;

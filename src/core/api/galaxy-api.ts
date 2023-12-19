@@ -61,7 +61,9 @@ export default class GalaxyApi {
             corporations: this.caches.corporation.entries().map(([planetId, cache]) => {
               const corporation: Corporation | null = cache.forTycoonId(tycoon.id);
               return corporation?.toJsonApi(Array.from(corporation?.companyIds ?? []).map(id => this.caches.company.withPlanetId(planetId).forId(id)).filter(c => !!c) as Company[]);
-            }).filter(c => !!c).flat(1)
+            }).filter(c => !!c).flat(1),
+            admin: tycoon.admin,
+            gameMaster: tycoon.gameMaster
           }
         });
       }
@@ -87,10 +89,29 @@ export default class GalaxyApi {
       }).filter(c => !!c).flat(1);
 
       const accessToken = jwt.sign({ id: user.id }, this.galaxyManager.secret, { expiresIn: 3600 });
-      if (!issueRefreshToken) return res.json({ id: user.id, username: user.username, name: user.name, accessToken: accessToken, corporations: corporations });
+      if (!issueRefreshToken) {
+        return res.json({
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          accessToken: accessToken,
+          corporations: corporations,
+          admin: user.admin,
+          gameMaster: user.gameMaster
+        });
+      }
 
       const token = await this.modelEventClient.issueToken(user);
-      return res.json({ id: user.id, username: user.username, name: user.name, accessToken: accessToken, refreshToken: token, corporations: corporations });
+      return res.json({
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        accessToken: accessToken,
+        refreshToken: token,
+        corporations: corporations,
+        admin: user.admin,
+        gameMaster: user.gameMaster
+      });
     }
     catch (err) {
       this.logger.error(err);
@@ -119,7 +140,7 @@ export default class GalaxyApi {
       if (req.body.refreshToken) {
         try {
           const tycoon: Tycoon | null = await this.modelEventClient.loginToken(req.body.refreshToken);
-          if (!tycoon) return res.status(401).json({ code: 'INVALID_TOKEN' });
+          if (!tycoon || !!tycoon.bannedAt) return res.status(401).json({ code: 'INVALID_TOKEN' });
           return await this.loginUser(req, res, next, tycoon, true);
         }
         catch (err) {

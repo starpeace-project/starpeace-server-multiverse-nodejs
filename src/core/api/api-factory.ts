@@ -148,7 +148,7 @@ export default class ApiFactory {
         },
         async (username: string, password: string, done: any) => {
           return tycoonManager.forUsernamePassword(username, password)
-            .then((account: any) => account ? done(null, account) : done(null, false, { message: 'NOT_FOUND' }))
+            .then((account: any) => account && !account.bannedAt ? done(null, account) : done(null, false, { message: 'NOT_FOUND' }))
             .catch((err: any) => done(err));
         }
       )
@@ -164,7 +164,7 @@ export default class ApiFactory {
         (payload: any, done: any) => {
           if (new Date(payload.exp * 1000) < new Date()) return done(null, false);
           const account = tycoonManager.forId(payload.id);
-          return account ? done(null, account) : done(null, false, { message: 'NOT_FOUND' });
+          return account && !account.bannedAt ? done(null, account) : done(null, false, { message: 'NOT_FOUND' });
         }
       )
     );

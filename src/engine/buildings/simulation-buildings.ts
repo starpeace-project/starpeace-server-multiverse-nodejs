@@ -14,10 +14,12 @@ import BuildingSettings from '../../building/settings/building-settings.js';
 import BuildingLaborSettings from '../../building/settings/building-labor-settings.js';
 import BuildingMetrics from '../../building/metrics/building-metrics.js';
 import BuildingServiceSettings from '../../building/settings/building-service-settings.js';
+import Corporation from '../../corporation/corporation.js';
 
 export interface BuildingSimulationParameters {
   planetTime: DateTime;
 
+  corporationById: Record<string, Corporation>;
   buildingById: Record<string, Building>;
   constructionById: Record<string, BuildingConstruction>;
   metricsById: Record<string, BuildingMetrics>;
@@ -135,12 +137,13 @@ export default class SimulationBuildings {
     const headquartersByCompanyId: Record<string, Building> = {};
 
     for (const building of Object.values(parameters.buildingById)) {
+      const corporation: Corporation | undefined = building.corporationId !== 'IFEL' ? parameters.corporationById[building.corporationId] : undefined;
       const definition: SimulationDefinition | undefined = this.buildingConfigurations.simulationById[building.definitionId];
       const construction = parameters.constructionById[building.id];
       const settings = parameters.settingsById[building.id];
       const metrics = parameters.metricsById[building.id];
 
-      if (!!building.condemnedAt && building.condemnedAt < parameters.planetTime) {
+      if (!!building.condemnedAt && building.condemnedAt < parameters.planetTime || corporation?.bannedAt && corporation?.bannedAt.plus({ days: 1}) > parameters.planetTime) {
         deletedBuildingIds.add(building.id);
 
         if (metrics?.clear()) {

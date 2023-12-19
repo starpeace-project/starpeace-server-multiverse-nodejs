@@ -172,6 +172,7 @@ export default class Simulation {
 
     const buildingsFrame: SimulationBuildingFrame = this.buildings.simulationBuilding({
       planetTime: planet.time,
+      corporationById: corporationById,
       buildingById,
       constructionById: buildingConstructionById,
       metricsById: buildingMetricsById,

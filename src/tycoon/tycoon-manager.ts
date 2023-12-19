@@ -28,7 +28,7 @@ export default class TycoonManager {
       else {
         hash(password, 10, (err: Error | undefined, hash: string) => {
           if (err) return reject(err);
-          this.modelClient.createTycoon(new Tycoon(Utils.uuid(), username, username, hash))
+          this.modelClient.createTycoon(new Tycoon({ id: Utils.uuid(), username: username, name: username, passwordHash: hash }))
             .then(resolve)
             .catch(reject)
         });
