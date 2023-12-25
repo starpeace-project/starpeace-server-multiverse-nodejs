@@ -1,6 +1,5 @@
 import _ from 'lodash';
 import http from 'http';
-import { Server as ioServer } from 'socket.io';
 import winston from 'winston';
 
 import ModelEventClient from './events/model-event-client.js';
@@ -9,7 +8,6 @@ import ModelEventSubscriber from './events/model-event-subscriber.js';
 import SimulationEventSubscriber from './events/simulation-event-subscriber.js';
 
 import ApiFactory from './api/api-factory.js';
-import BusFactory from './bus/bus-factory.js';
 import ConnectionManager from './connection-manager.js';
 import GalaxyManager, { BuildingConfigurations, CoreConfigurations, InventionConfigurations } from './galaxy-manager.js';
 import CacheByPlanet from '../planet/cache-by-planet.js';
@@ -19,6 +17,7 @@ import TycoonSocketCache from '../tycoon/tycoon-socket-cache.js';
 import { asTycoonDao } from '../tycoon/tycoon-dao.js';
 
 import BusEventsCache from './bus/bus-events-cache.js';
+import BusManager from './bus/bus-manager.js';
 import BuildingCache from '../building/building-cache.js';
 import { asBuildingDao } from '../building/building-dao.js';
 import BuildingConstructionCache from '../building/construction/building-construction-cache.js';
@@ -80,9 +79,9 @@ export default class HttpServer {
   running: boolean = false;
 
   connectionManager: ConnectionManager;
+  busManager: BusManager;
 
   server: http.Server;
-  io: ioServer;
 
   constructor () {
     this.logger = winston.createLogger({
@@ -166,8 +165,8 @@ export default class HttpServer {
 
 
     this.server = ApiFactory.create(this.logger, this.galaxyManager, this.modelEventClient, this.caches);
-    this.io = BusFactory.create(this.server, this.galaxyManager, this.caches);
-    this.connectionManager = new ConnectionManager(this.logger, this.io);
+    this.busManager = new BusManager(this.logger, this.server, this.galaxyManager, this.caches);
+    this.connectionManager = new ConnectionManager(this.logger, this.busManager.io);
 
     this.configureEvents();
     this.loadCaches();
@@ -177,7 +176,7 @@ export default class HttpServer {
 
   configureEvents () {
     this.server.on('connection', (socket) => this.connectionManager.handleConnection(socket));
-    BusFactory.configureEvents(this.logger, this.io, this.connectionManager, this.modelEventPublisher, this.caches);
+    this.busManager.configureEvents(this.connectionManager, this.modelEventPublisher);
 
     this.modelEventSubscriber.events.on('connectSocket', (event) => this.caches.tycoonSocket.set(event.tycoonId, event.socketId));
     this.modelEventSubscriber.events.on('disconnectSocket', (event) => {
@@ -262,7 +261,7 @@ export default class HttpServer {
       this.logger.info('Stopping Worker...');
 
       this.connectionManager.stop();
-      await new Promise<void>((resolve: () => void, reject: (err: Error) => void) => this.io.close((err?: Error) => err ? reject(err) : resolve()));
+      await new Promise<void>((resolve: () => void, reject: (err: Error) => void) => this.busManager.io.close((err?: Error) => err ? reject(err) : resolve()));
 
       this.modelEventClient.stop();
       this.modelEventPublisher.stop();
@@ -297,7 +296,7 @@ export default class HttpServer {
     for (let socketId of info.disconnectableSocketIds) {
       await this.modelEventPublisher.disconnectSocket(socketId);
     }
-    BusFactory.notifySockets(this.logger, this.caches, event, info.connectedSocketsByTycoonIds);
+    this.busManager.notifySockets(event, info.connectedSocketsByTycoonIds);
   }
 
 }

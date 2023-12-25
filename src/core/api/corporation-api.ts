@@ -377,11 +377,12 @@ export default class CorporationApi {
 
         const tasks = [];
         if (targetTycoons.length) {
-          tasks.push(...targetTycoons.map(t => {
+          for (const t of targetTycoons) {
             const targetCorporation: Corporation | null = tycoonCorporations[t.id];
-            if (!targetCorporation) return null;
-            return this.modelEventClient.sendMail(planetId, new Mail(Utils.uuid(), targetCorporation.id, false, sentAt, planetSentAt, new MailEntity(sourceTycoon.id, sourceTycoon.name), targetTycoons.map(t => new MailEntity(t.id, t.name)), subject, body));
-          }).filter(t => !!t));
+            if (targetCorporation) {
+              tasks.push(this.modelEventClient.sendMail(planetId, new Mail(Utils.uuid(), targetCorporation.id, false, sentAt, planetSentAt, new MailEntity(sourceTycoon.id, sourceTycoon.name), targetTycoons.map(t => new MailEntity(t.id, t.name)), subject, body)));
+            }
+          }
         }
 
         if (undeliverableNames.length) {
@@ -389,7 +390,7 @@ export default class CorporationApi {
         }
 
         await Promise.all(tasks);
-        return res;
+        return res.sendStatus(200);
       }
       catch (err) {
         this.logger.error(err);
@@ -411,7 +412,7 @@ export default class CorporationApi {
         if (mailId !== req.params.mailId) {
           return res.sendStatus(500);
         }
-        return res;
+        return res.sendStatus(200);
       }
       catch (err) {
         this.logger.error(err);
@@ -430,7 +431,7 @@ export default class CorporationApi {
         if (mailId !== req.params.mailId) {
           return res.sendStatus(500);
         }
-        return res;
+        return res.sendStatus(200);
       }
       catch (err) {
         this.logger.error(err);

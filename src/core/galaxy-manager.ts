@@ -26,20 +26,55 @@ import {
   isSimulationWithStorage
 } from '@starpeace/starpeace-assets-types';
 
+export interface GalaxyVisaSettings {
+  issue?: boolean | undefined;
+  create?: boolean | undefined;
+}
+  // visitorEnabled: boolean;
+  // tycoonEnabled: boolean;
+  // tycoonCreationEnabled: boolean;
+
+export interface GalaxyVisasSettings {
+  visitor: boolean | GalaxyVisaSettings;
+  tycoon: boolean | GalaxyVisaSettings;
+}
+
 export interface GalaxySettings {
+  /**
+   * Only password is expected
+   */
+  authentication: string;
+
+  /**
+   * Hash used for passwords
+   */
+  secretHash: string;
+
+  /**
+   * Encoding of websocket payloads (raw or gzip)
+   */
+  streamEncoding: string;
+
+  /**
+   * Port of public HTTP server (usually 443)
+   */
   port: number;
+
+  /**
+   * Path to SSL private key
+   */
   privateKeyPath?: string | undefined;
+
+  /**
+   * Path to SSL certificate chain
+   */
   certificatePath?: string | undefined;
 }
 
 export interface GalaxyMetadata {
   id: string;
   name: string;
-  visitorEnabled: boolean;
-  tycoonEnabled: boolean;
-  tycoonCreationEnabled: boolean;
-  tycoonAuthentication: string;
-  secretHash: string;
+  visas: GalaxyVisasSettings;
   settings: GalaxySettings;
 }
 
@@ -224,7 +259,27 @@ export default class GalaxyManager {
     return Object.values(this.planetMetadataById);
   }
   get secret (): string {
-    return this.galaxyMetadata.secretHash;
+    return this.galaxyMetadata.settings.secretHash;
+  }
+
+  get isVisitorIssueEnabled (): boolean {
+    if ((this.galaxyMetadata.visas?.visitor as GalaxyVisaSettings)?.issue !== undefined) {
+      return (this.galaxyMetadata.visas?.visitor as GalaxyVisaSettings)?.issue === true;
+    }
+    return this.galaxyMetadata.visas?.visitor === true;
+  }
+
+  get isTycoonIssueEnabled (): boolean {
+    if ((this.galaxyMetadata.visas?.tycoon as GalaxyVisaSettings)?.issue !== undefined) {
+      return (this.galaxyMetadata.visas?.tycoon as GalaxyVisaSettings)?.issue === true;
+    }
+    return this.galaxyMetadata.visas?.tycoon === true;
+  }
+  get isTycoonCreateEnabled (): boolean {
+    if ((this.galaxyMetadata.visas?.tycoon as GalaxyVisaSettings)?.create !== undefined) {
+      return (this.galaxyMetadata.visas?.tycoon as GalaxyVisaSettings)?.create === true;
+    }
+    return this.galaxyMetadata.visas?.tycoon === true;
   }
 
   forPlanet (planetId: string): PlanetMetadata | null { return this.planetMetadataById[planetId]; }

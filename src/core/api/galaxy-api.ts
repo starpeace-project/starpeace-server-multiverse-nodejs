@@ -49,10 +49,19 @@ export default class GalaxyApi {
         return res.json({
           id: this.galaxyManager.galaxyMetadata.id,
           name: this.galaxyManager.galaxyMetadata.name,
-          visitorEnabled: this.galaxyManager.galaxyMetadata.visitorEnabled,
-          tycoonEnabled: this.galaxyManager.galaxyMetadata.tycoonEnabled,
-          tycoonCreationEnabled: this.galaxyManager.galaxyMetadata.tycoonCreationEnabled,
-          tycoonAuthentication: this.galaxyManager.galaxyMetadata.tycoonAuthentication,
+          visas: {
+            visitor: {
+              issue: this.galaxyManager.isVisitorIssueEnabled
+            },
+            tycoon: {
+              issue: this.galaxyManager.isTycoonIssueEnabled,
+              create: this.galaxyManager.isTycoonCreateEnabled
+            }
+          },
+          settings: {
+            authentication: this.galaxyManager.galaxyMetadata.settings.authentication,
+            streamEncoding: this.galaxyManager.galaxyMetadata.settings.streamEncoding
+          },
           planets: planets,
           tycoon: !tycoon ? null : {
             id: tycoon.id,

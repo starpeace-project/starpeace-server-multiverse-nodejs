@@ -105,12 +105,20 @@ const setupConfiguration = async ({ configurations }: any): Promise<any> => {
     const galaxyMetadata: GalaxyMetadata = {
       "id": Utils.uuid(),
       "name": "Server name",
-      "visitorEnabled": true,
-      "tycoonEnabled": true,
-      "tycoonCreationEnabled": true,
-      "tycoonAuthentication": "password",
-      "secretHash": Utils.uuid(),
+      "visas": {
+        "visitor": false,
+        "tycoon": {
+          "issue": true,
+          "create": true
+        }
+      },
+      // "visitorEnabled": true,
+      // "tycoonEnabled": true,
+      // "tycoonCreationEnabled": true,
       "settings": {
+        "authentication": "password",
+        "secretHash": Utils.uuid(),
+        "streamEncoding": "gzip",
         "port": 19160,
         "privateKeyPath": "./galaxy/ssl/privatekey.pem",
         "certificatePath": "./galaxy/ssl/certificate.pem"

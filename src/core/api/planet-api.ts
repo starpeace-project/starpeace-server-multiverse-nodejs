@@ -35,8 +35,8 @@ export default class PlanetApi {
       const isTycoon: boolean = req.body.identityType == 'tycoon';
 
       if (!isVisitor && !isTycoon) return res.sendStatus(400);
-      if (isVisitor && !this.galaxyManager.galaxyMetadata.visitorEnabled) return res.sendStatus(400);
-      if (isTycoon && !this.galaxyManager.galaxyMetadata.tycoonEnabled) return res.sendStatus(400);
+      if (isVisitor && !this.galaxyManager.isVisitorIssueEnabled) return res.sendStatus(400);
+      if (isTycoon && !this.galaxyManager.isTycoonIssueEnabled) return res.sendStatus(400);
       if (isTycoon && !req.isAuthenticated()) return res.sendStatus(401);
       if (!req.planet) return res.sendStatus(400);
 
