@@ -55,6 +55,10 @@ export default class Building {
     this.condemnedAt = parameters.condemnedAt;
   }
 
+  get isIfel (): boolean {
+    return this.corporationId === 'IFEL';
+  }
+
   get constructed (): boolean {
     return !!this.constructionFinishedAt;
   }

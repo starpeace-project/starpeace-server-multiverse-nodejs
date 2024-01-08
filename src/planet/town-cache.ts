@@ -53,9 +53,15 @@ export default class TownCache {
     return town;
   }
 
-  all (): Town[] { return Object.values(this.byId); }
-  forId (townId: string): Town | null { return this.byId[townId]; }
-  forColor (color: number): Town | null { return this.byColor[color]; }
+  all (): Town[] {
+    return Object.values(this.byId);
+  }
+  forId (townId: string): Town | undefined {
+    return this.byId[townId];
+  }
+  forColor (color: number): Town | undefined {
+    return this.byColor[color];
+  }
 
   update (townOrTowns: Town | Array<Town>): void {
     if (Array.isArray(townOrTowns)) {
@@ -69,4 +75,12 @@ export default class TownCache {
     }
   }
 
+  updateCash (townId: string, cash: number): Town | undefined {
+    const town: Town | undefined = this.forId(townId);
+    if (town && town.cash !== cash) {
+      town.cash = cash;
+      this.dirtyIds.add(townId);
+    }
+    return town;
+  }
 }

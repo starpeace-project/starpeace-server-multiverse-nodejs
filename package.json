@@ -1,6 +1,6 @@
 {
   "name": "@starpeace/starpeace-server-multiverse-nodejs",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "STARPEACE Multiverse game-play and simulation server created with NodeJS",
   "author": "starpeace-project",
   "license": "MIT",

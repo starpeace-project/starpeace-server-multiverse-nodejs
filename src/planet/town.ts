@@ -9,7 +9,9 @@ export default class Town {
   mapX: number;
   mapY: number;
 
-  constructor (id: string, name: string, sealId: string, color: number, buildingId: string, mapX: number, mapY: number) {
+  cash: number;
+
+  constructor (id: string, name: string, sealId: string, color: number, buildingId: string, mapX: number, mapY: number, cash: number) {
     this.id = id;
     this.name = name;
     this.sealId = sealId;
@@ -17,6 +19,7 @@ export default class Town {
     this.buildingId = buildingId;
     this.mapX = mapX;
     this.mapY = mapY;
+    this.cash = cash;
   }
 
   toJson (): any {
@@ -27,7 +30,8 @@ export default class Town {
       color: this.color,
       buildingId: this.buildingId,
       mapX: this.mapX,
-      mapY: this.mapY
+      mapY: this.mapY,
+      cash: this.cash
     };
   }
 
@@ -39,7 +43,8 @@ export default class Town {
       json.color,
       json.buildingId,
       json.mapX,
-      json.mapY
+      json.mapY,
+      json.cash ?? 0
     );
   }
 }

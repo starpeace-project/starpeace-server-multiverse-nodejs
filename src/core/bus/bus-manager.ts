@@ -34,6 +34,7 @@ import CorporationPayload from './events/types/corporation-payload.js';
 import PlanetPayload from './events/types/planet-payload.js';
 import ViewPayload from './events/types/view-payload.js';
 import CompanyPayload from './events/types/company-payload.js';
+import TownCache from '../../planet/town-cache.js';
 
 
 export default class BusManager {
@@ -160,6 +161,7 @@ export default class BusManager {
 
   notifySockets (event: SimulationFrame, socketsByTycoonId: Record<string, ioSocket>): void {
     const planet: Planet = this.caches.planet.withPlanetId(event.planetId).update(event.planet);
+    const townCache: TownCache = this.caches.town.withPlanetId(event.planetId);
     const buildingCache: BuildingCache = this.caches.building.withPlanetId(event.planetId);
     const buildingConstructionCache: BuildingConstructionCache = this.caches.buildingConstruction.withPlanetId(event.planetId);
     const cashflowCache: CashflowCache = this.caches.cashflow.withPlanetId(event.planetId);
@@ -167,6 +169,9 @@ export default class BusManager {
     const companyCache: CompanyCache = this.caches.company.withPlanetId(event.planetId);
     const inventionSummaryCache: InventionSummaryCache = this.caches.inventionSummary.withPlanetId(event.planetId);
 
+    for (const [townId, cash] of Object.entries(event.finances.cashByTownId)) {
+      townCache.updateCash(townId, cash);
+    }
     for (const [corporationId, cash] of Object.entries(event.finances.cashByCorporationId)) {
       corporationCache.updateCash(corporationId, cash);
     }

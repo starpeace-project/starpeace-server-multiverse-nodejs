@@ -139,39 +139,24 @@ export default class Simulation {
     const buildingConstructionById: Record<string, BuildingConstruction> = this.caches.buildingConstruction.byId;
     const buildingMetricsById: Record<string, BuildingMetrics> = this.caches.buildingMetrics.metricsByBuildingId;
     const buildingSettingsById: Record<string, BuildingSettings> = this.caches.buildingSettings.settingsByBuildingId;
-    const towns: Town[] = this.caches.town.all();
+    const townById: Record<string, Town> = this.caches.town.byId;
 
     const infos = [];
     infos.push(`${corporationIds.length} corporations`);
     infos.push(`${Object.keys(companyById).length} companies`);
-    infos.push(`${towns.length} towns`);
+    infos.push(`${Object.keys(townById).length} towns`);
     infos.push(`${Object.keys(buildingById).length} buildings`);
     infos.push(`${Object.keys(buildingConstructionById).length} constructions`);
     infos.push(`${Object.keys(buildingMetricsById).length} metrics`);
     infos.push(`${Object.keys(buildingSettingsById).length} settings`);
     this.simulationLogger.info("[%s] %s", planet.planetTime, infos.join(', '));
 
-    const cashByCorporationId: Record<string, number> = {};
-    const cashflowByCorporationId: Record<string, number> = {};
-    const cashflowByCompanyId: Record<string, number> = {};
-    const cashflowByBuildingId: Record<string, number> = {};
-
-    for (const corporation of Object.values(corporationById)) {
-      cashByCorporationId[corporation.id] = corporation.cash;
-      cashflowByCorporationId[corporation.id] = 0;
-    }
-    for (const companyId of Object.keys(companyById)) {
-      cashflowByCompanyId[companyId] = 0;
-    }
-    for (const buildingId of Object.keys(buildingById)) {
-      cashflowByBuildingId[buildingId] = 0;
-    }
-
-    const financesFrame: SimulationFinancesFrame = new SimulationFinancesFrame({ cashByCorporationId, cashflowByCorporationId, cashflowByCompanyId, cashflowByBuildingId });
+    const financesFrame: SimulationFinancesFrame = SimulationFinancesFrame.create(townById, corporationById, companyById, buildingById)
     const researchFrame: SimulationResearchFrame = this.research.simulateResarch(companyById, financesFrame);
 
     const buildingsFrame: SimulationBuildingFrame = this.buildings.simulationBuilding({
       planetTime: planet.time,
+      townById: townById,
       corporationById: corporationById,
       buildingById,
       constructionById: buildingConstructionById,
@@ -180,11 +165,14 @@ export default class Simulation {
       finances: financesFrame
     });
 
-    const townMetrics: Array<GovernmentMetrics> = this.metrics.gatherGovernmentMetrics(towns, buildingById);
+    const townMetrics: Array<GovernmentMetrics> = this.metrics.gatherGovernmentMetrics(townById, buildingById, buildingMetricsById);
 
     // update caches
+    for (const townId of Object.keys(townById)) {
+      townById[townId].cash = financesFrame.townCash(townId);
+    }
     for (const corporationId of corporationIds) {
-      corporationById[corporationId].cash = financesFrame.corporationCash(corporationId)
+      corporationById[corporationId].cash = financesFrame.corporationCash(corporationId);
     }
     for (const buildingId of buildingsFrame.deletedBuildingIds) {
       // TODO: remove other building types (settings, metrics, construction, history)

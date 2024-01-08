@@ -36,8 +36,8 @@ export default class BuildingMetrics {
     this.storageByResourceId = parameters.storageByResourceId ?? {};
   }
 
-  updateLabor (resourceId: string, velocity: number, quality: number) {
-    return this.laborByResourceId[resourceId]?.update(velocity, velocity * quality) ?? false;
+  updateLabor (resourceId: string, velocity: number, quality: number, wagePrice: number) {
+    return this.laborByResourceId[resourceId]?.update(velocity, velocity * quality, velocity * wagePrice) ?? false;
   }
   clearLabor (): boolean {
     return Object.values(this.laborByResourceId).map(m => m.clear()).some(c => c);

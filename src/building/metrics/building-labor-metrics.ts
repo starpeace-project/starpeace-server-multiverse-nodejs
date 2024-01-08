@@ -4,24 +4,28 @@ export default class BuildingLaborMetrics {
 
   mostRecentVelocity: number;
   mostRecentTotalQuality: number;
+  mostRecentTotalWages: number;
 
-  constructor (resourceId: string, mostRecentVelocity: number, mostRecentTotalQuality: number) {
+  constructor (resourceId: string, mostRecentVelocity: number, mostRecentTotalQuality: number, mostRecentTotalWages: number) {
     this.resourceId = resourceId;
     this.mostRecentVelocity = mostRecentVelocity;
     this.mostRecentTotalQuality = mostRecentTotalQuality;
+    this.mostRecentTotalWages = mostRecentTotalWages;
   }
 
-  update (velocity: number, totalQuality: number): boolean {
-    const didUpdate = this.mostRecentVelocity !== velocity || this.mostRecentTotalQuality !== totalQuality;
+  update (velocity: number, totalQuality: number, totalWages: number): boolean {
+    const didUpdate = this.mostRecentVelocity !== velocity || this.mostRecentTotalQuality !== totalQuality || this.mostRecentTotalWages !== totalWages;
     this.mostRecentVelocity = velocity;
     this.mostRecentTotalQuality = totalQuality;
+    this.mostRecentTotalWages = totalWages;
     return didUpdate;
   }
 
   clear (): boolean {
-    const didClear = this.mostRecentVelocity !== 0 || this.mostRecentTotalQuality !== 0;
+    const didClear = this.mostRecentVelocity !== 0 || this.mostRecentTotalQuality !== 0 || this.mostRecentTotalWages !== 0;
     this.mostRecentVelocity = 0;
     this.mostRecentTotalQuality = 0;
+    this.mostRecentTotalWages = 0;
     return didClear;
   }
 
@@ -30,6 +34,7 @@ export default class BuildingLaborMetrics {
       resourceId: this.resourceId,
       mostRecentVelocity: this.mostRecentVelocity,
       mostRecentTotalQuality: this.mostRecentTotalQuality,
+      mostRecentTotalWages: this.mostRecentTotalWages
     };
   }
 
@@ -37,7 +42,8 @@ export default class BuildingLaborMetrics {
     return new BuildingLaborMetrics(
       json.resourceId,
       json.mostRecentVelocity ?? 0,
-      json.mostRecentTotalQuality ?? 0
+      json.mostRecentTotalQuality ?? 0,
+      json.mostRecentTotalWages ?? 0
     );
   }
 }

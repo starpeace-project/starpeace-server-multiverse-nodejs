@@ -48,7 +48,7 @@ export default class MapCache {
     });
   }
 
-  findTown (mapX: number, mapY: number): Town | null {
+  findTown (mapX: number, mapY: number): Town | undefined {
     return this.townCache.forColor(this.townData[mapX * this.planetMetadata.planetWidth + mapY]);
   }
 }

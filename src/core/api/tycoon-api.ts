@@ -10,6 +10,20 @@ import Corporation from '../../corporation/corporation.js';
 import Tycoon from '../../tycoon/tycoon.js';
 import CorporationCache from '../../corporation/corporation-cache.js';
 import CorporationIdentifier from '../../corporation/corporation-identifier.js';
+import { DateTime } from 'luxon';
+
+function toAdminTycoonJson (tycoon: Tycoon): any {
+  return {
+    id: tycoon.id,
+    username: tycoon.username,
+    name: tycoon.name,
+    admin: tycoon.admin,
+    gameMaster: tycoon.gameMaster,
+    bannedAt: tycoon.bannedAt,
+    bannedBy: tycoon.bannedBy,
+    bannedReason: tycoon.bannedReason
+  };
+}
 
 export default class TycoonApi {
   logger: winston.Logger;
@@ -22,6 +36,108 @@ export default class TycoonApi {
     this.galaxyManager = galaxyManager;
     this.modelEventClient = modelEventClient;
     this.caches = caches;
+  }
+
+  getTycoons (): (req: express.Request, res: express.Response) => any {
+    return async (_req: express.Request, res: express.Response) => {
+      try {
+        return res.json(this.caches.tycoon.all().map(toAdminTycoonJson));
+      }
+      catch (err) {
+        this.logger.error(err);
+        return res.sendStatus(500);
+      }
+    };
+  }
+
+  setTycoonRole (): (req: express.Request, res: express.Response) => any {
+    return async (req: express.Request, res: express.Response) => {
+      if (!req.params.tycoonId) return res.sendStatus(400);
+      if (!req.params.roleId) return res.sendStatus(400);
+
+      try {
+        const tycoon: Tycoon | null = this.caches.tycoon.forId(req.params.tycoonId);
+        if (!tycoon) return res.sendStatus(404);
+
+        if (req.params.roleId === 'GM' && !tycoon.isPriviledged) {
+          tycoon.gameMaster = true;
+          await this.modelEventClient.updateTycoon(tycoon);
+        }
+
+        return res.json(toAdminTycoonJson(tycoon));
+      }
+      catch (err) {
+        this.logger.error(err);
+        return res.sendStatus(500);
+      }
+    };
+  }
+  removeTycoonRole (): (req: express.Request, res: express.Response) => any {
+    return async (req: express.Request, res: express.Response) => {
+      if (!req.params.tycoonId) return res.sendStatus(400);
+      if (!req.params.roleId) return res.sendStatus(400);
+
+      try {
+        const tycoon: Tycoon | null = this.caches.tycoon.forId(req.params.tycoonId);
+        if (!tycoon) return res.sendStatus(404);
+
+        if (req.params.roleId === 'GM' && tycoon.gameMaster) {
+          tycoon.gameMaster = false;
+          await this.modelEventClient.updateTycoon(tycoon);
+        }
+
+        return res.json(toAdminTycoonJson(tycoon));
+      }
+      catch (err) {
+        this.logger.error(err);
+        return res.sendStatus(500);
+      }
+    };
+  }
+
+  setTycoonBan (): (req: express.Request, res: express.Response) => any {
+    return async (req: express.Request, res: express.Response) => {
+      if (!req.params.tycoonId) return res.sendStatus(400);
+
+      try {
+        const tycoon: Tycoon | null = this.caches.tycoon.forId(req.params.tycoonId);
+        if (!tycoon) return res.sendStatus(404);
+        if (tycoon.isPriviledged) return res.sendStatus(400);
+
+        if (!tycoon.bannedAt) {
+          tycoon.bannedAt = DateTime.now();
+          tycoon.bannedBy = (req.user as Tycoon).name;
+          await this.modelEventClient.updateTycoon(tycoon);
+        }
+        return res.json(toAdminTycoonJson(tycoon));
+      }
+      catch (err) {
+        this.logger.error(err);
+        return res.sendStatus(500);
+      }
+    };
+  }
+  removeTycoonBan (): (req: express.Request, res: express.Response) => any {
+    return async (req: express.Request, res: express.Response) => {
+      if (!req.params.tycoonId) return res.sendStatus(400);
+
+      try {
+        const tycoon: Tycoon | null = this.caches.tycoon.forId(req.params.tycoonId);
+        if (!tycoon) return res.sendStatus(404);
+
+        if (!!tycoon.bannedAt) {
+          tycoon.bannedAt = undefined;
+          tycoon.bannedBy = undefined;
+          tycoon.bannedReason = undefined;
+          await this.modelEventClient.updateTycoon(tycoon);
+        }
+        return res.json(toAdminTycoonJson(tycoon));
+      }
+      catch (err) {
+        this.logger.error(err);
+        return res.sendStatus(500);
+      }
+    };
   }
 
   getTycoon (): (req: express.Request, res: express.Response) => any {
@@ -46,6 +162,7 @@ export default class TycoonApi {
       }
     };
   }
+
 
   getTycoonCorporations (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {

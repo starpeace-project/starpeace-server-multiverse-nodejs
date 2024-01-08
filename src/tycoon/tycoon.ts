@@ -39,6 +39,10 @@ export default class Tycoon {
     this.bannedReason = parameters.bannedReason;
   }
 
+  get isPriviledged (): boolean {
+    return this.admin || this.gameMaster;
+  }
+
   toJson () {
     return {
       id: this.id,
@@ -51,6 +55,10 @@ export default class Tycoon {
       bannedBy: this.bannedBy,
       bannedReason: this.bannedReason
     };
+  }
+
+  static isPrivileged (user: Express.User | undefined): boolean {
+    return !!user && ((user as Tycoon).admin || (user as Tycoon).gameMaster);
   }
 
   static fromJson (json: any): Tycoon {

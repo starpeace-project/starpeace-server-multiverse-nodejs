@@ -66,7 +66,14 @@ export default class PlanetApi {
     return async (req: express.Request, res: express.Response, next: any) => {
       try {
         const visaId = req.header('VisaId');
-        if (!visaId) return res.status(401).json({message: 'MISSING_VISA'});
+        if (!visaId) {
+          if (Tycoon.isPrivileged(req.user)) {
+            return next();
+          }
+          else {
+            return res.status(401).json({message: 'MISSING_VISA'});
+          }
+        }
 
         const visa: TycoonVisa | null = this.caches.tycoonVisa.forId(visaId);
         if (!visa) return res.status(401).json({message: 'UNKNOWN_VISA'});
@@ -105,6 +112,41 @@ export default class PlanetApi {
     };
   }
 
+  getPlanetFinances (): (req: express.Request, res: express.Response) => any {
+    return async (req: express.Request, res: express.Response) => {
+      if (!req.planet) return res.sendStatus(400);
+
+      const cache = this.caches.cashflow.withPlanet(req.planet);
+      return res.json({
+        towns: this.caches.town.withPlanet(req.planet).all().map(t => {
+          return {
+            id: t.id,
+            cash: t.cash
+          };
+        }),
+        corporations: this.caches.corporation.withPlanet(req.planet).all().map(c => {
+          return {
+            id: c.id,
+            cash: c.cash,
+            cashflow: cache.byCorporationId[c.id] ?? 0
+          };
+        }),
+        companies: Object.entries(cache.byCompanyId).map(([id, cashflow]) => {
+          return {
+            id: id,
+            cashflow: cashflow
+          };
+        }),
+        buildings: Object.entries(cache.byBuildingId).map(([id, cashflow]) => {
+          return {
+            id: id,
+            cashflow: cashflow
+          };
+        })
+      });
+    };
+  }
+
   getPlanetDetails (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
       if (!req.planet) return res.sendStatus(400);
@@ -135,7 +177,7 @@ export default class PlanetApi {
       if (!req.planet || !req.params.townId) return res.sendStatus(400);
 
       try {
-        const town: Town | null = this.caches.town.withPlanet(req.planet).forId(req.params.townId);
+        const town: Town | undefined = this.caches.town.withPlanet(req.planet).forId(req.params.townId);
         if (!town) return res.sendStatus(404);
 
         const [metrics, politics, taxes] = await Promise.all([
@@ -147,6 +189,9 @@ export default class PlanetApi {
         return res.json({
           id: req.params.townId,
           qol: metrics?.qualityOfLife,
+          budget: {
+            cash: town.cash
+          },
           services: (metrics?.services ?? []).map(s => s.toJson()),
           commerce: (metrics?.commerce ?? []).map(c => c.toJson()),
           taxes: (taxes?.taxes ?? []).map(t => t.toJson()),

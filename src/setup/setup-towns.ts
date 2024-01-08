@@ -3,7 +3,7 @@ import { DateTime } from 'luxon';
 import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
-import { BuildingImageDefinition, TownhallDefinition, TradeCenterDefinition } from '@starpeace/starpeace-assets-types';
+import { BuildingImageDefinition, PortalDefinition, TownhallDefinition, TradeCenterDefinition } from '@starpeace/starpeace-assets-types';
 
 import Building from "../building/building.js";
 import Town from "../planet/town.js";
@@ -117,7 +117,7 @@ export default class SetupTowns {
       Service.TYPES.map((t) => new Service(t, 0)),
       commerceIndustryTypeIds.map((t) => new Commerce(t, 0, 0, 0, 0, 0, 0, 0)),
       LABOR_RESOURCE_IDS.map((id) => new Population(id, 0, 0, 0)),
-      LABOR_RESOURCE_IDS.map((id) => new Employment(id, 0, 0, 0, 1, 0)),
+      LABOR_RESOURCE_IDS.map((id) => new Employment(id, 0, 0, 0, 0)),
       LABOR_RESOURCE_IDS.map((id) => new Housing(id, 0, 0, 1, 0))
     );
   }
@@ -185,6 +185,7 @@ export default class SetupTowns {
       if (!fs.existsSync(configPath)) throw `Unable to find map ${mapId} configuration`;
 
       const portalBuilding = this.configurations.building.definitions['generic.portal'];
+      const portalDefinition = this.configurations.building.simulations['generic.portal'] as PortalDefinition;
       const portalImage = portalBuilding ? this.configurations.building.images[portalBuilding.imageId] : null;
       if (!portalBuilding || !portalImage) throw "Unable to find portal building or image";
 
@@ -267,7 +268,8 @@ export default class SetupTowns {
           townConfig.color,
           townhall.id,
           townhall.mapX,
-          townhall.mapY
+          townhall.mapY,
+          10000000000
         );
 
         await this.stores.town.set(town);
@@ -282,7 +284,7 @@ export default class SetupTowns {
         const townhallLaborSettingsByResourceId: Record<string, BuildingLaborSettings> = {};
         for (const job of townhallDefinition.labor) {
           const price = this.configurations.industry.resourceTypes[job.resourceId]?.price ?? 0;
-          townhallLaborMetricsByResourceId[job.resourceId] = new BuildingLaborMetrics(job.resourceId, 0, 0);
+          townhallLaborMetricsByResourceId[job.resourceId] = new BuildingLaborMetrics(job.resourceId, 0, 0, 0);
           townhallLaborSettingsByResourceId[job.resourceId] = new BuildingLaborSettings(job.resourceId, price * 1.5);
         }
 
@@ -301,11 +303,12 @@ export default class SetupTowns {
         }));
         console.log(`Saved townhall at (${townhall.mapX}, ${townhall.mapY}) with ${townhallDefinition.labor.length} labor to database`);
 
+
         const tradecenterLaborMetricsByResourceId: Record<string, BuildingLaborMetrics> = {};
         const tradecenterLaborSettingsByResourceId: Record<string, BuildingLaborSettings> = {};
         for (const job of tradecenterDefinition.labor) {
           const price = this.configurations.industry.resourceTypes[job.resourceId]?.price ?? 0;
-          tradecenterLaborMetricsByResourceId[job.resourceId] = new BuildingLaborMetrics(job.resourceId, 0, 0);
+          tradecenterLaborMetricsByResourceId[job.resourceId] = new BuildingLaborMetrics(job.resourceId, 0, 0, 0);
           tradecenterLaborSettingsByResourceId[job.resourceId] = new BuildingLaborSettings(job.resourceId, price * 1.5);
         }
         const tradecenterOutputMetricsByResourceId: Record<string, BuildingOutputMetrics> = {};
@@ -337,7 +340,28 @@ export default class SetupTowns {
         }));
         console.log(`Saved tradecenter at (${tradecenter.mapX}, ${tradecenter.mapY}) with ${tradecenterDefinition.labor.length} labor and ${tradecenterDefinition.outputs.length} products to database`);
 
+
+        const portalLaborMetricsByResourceId: Record<string, BuildingLaborMetrics> = {};
+        const portalLaborSettingsByResourceId: Record<string, BuildingLaborSettings> = {};
+        for (const job of portalDefinition.labor) {
+          const price = this.configurations.industry.resourceTypes[job.resourceId]?.price ?? 0;
+          portalLaborMetricsByResourceId[job.resourceId] = new BuildingLaborMetrics(job.resourceId, 0, 0, 0);
+          portalLaborSettingsByResourceId[job.resourceId] = new BuildingLaborSettings(job.resourceId, price * 1.5);
+        }
+
         await this.stores.building.set(portal)
+        await this.stores.buildingMetrics.set(new BuildingMetrics({
+          buildingId: portal.id,
+          laborByResourceId: portalLaborMetricsByResourceId
+        }));
+        await this.stores.buildingSettings.set(new BuildingSettings({
+          buildingId: portal.id,
+          laborByResourceId: portalLaborSettingsByResourceId,
+          closed: false,
+          connectionPosture: ConnectionPosture.ANYONE,
+          allowIncomingSettings: false,
+          requestedLevel: 1
+        }));
         console.log(`Saved portal at (${portal.mapX}, ${portal.mapY}) to database`);
       }
     }

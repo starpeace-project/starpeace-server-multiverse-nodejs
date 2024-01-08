@@ -156,7 +156,7 @@ export default class ModelEventServer {
     for await (const [message] of this.replySocket) {
       const request = JSON.parse(message.toString());
 
-      if (request.type == 'TYCOON:CREATE') {
+      if (request.type == 'TYCOON:CREATE' || request.type == 'TYCOON:UPDATE') {
         const tycoon: Tycoon = this.caches.tycoon.loadTycoon(await this.stores.tycoon.set(Tycoon.fromJson(request.tycoon)));
         await this.replySocket.send(JSON.stringify({ tycoon: tycoon.toJson() }));
         await this.publisherSocket.send(['TYCOON:UPDATE', JSON.stringify({ tycoon: tycoon.toJson() })]);

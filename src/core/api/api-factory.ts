@@ -31,13 +31,15 @@ import BuildingCache from '../../building/building-cache.js';
 import CompanyCache from '../../company/company-cache.js';
 import CorporationCache from '../../corporation/corporation-cache.js';
 import InventionSummaryCache from '../../company/invention-summary-cache.js';
+import MapCache from '../../planet/map-cache.js';
 import PlanetCache from '../../planet/planet-cache.js';
 import RankingsCache from '../../corporation/rankings-cache.js';
 import TownCache from '../../planet/town-cache.js';
+import Tycoon from '../../tycoon/tycoon.js';
 import TycoonCache from '../../tycoon/tycoon-cache.js';
 import TycoonManager from '../../tycoon/tycoon-manager.js';
 import TycoonVisaCache from '../../tycoon/tycoon-visa-cache.js';
-import MapCache from '../../planet/map-cache.js';
+import CashflowCache from '../../finances/cashflow-cache.js';
 
 const DEFAULT_TIMEOUT_IN_MS = 10 * 1000;
 
@@ -50,6 +52,7 @@ export interface ApiCaches {
   tycoonVisa: TycoonVisaCache;
 
   building: CacheByPlanet<BuildingCache>;
+  cashflow: CacheByPlanet<CashflowCache>;
   company: CacheByPlanet<CompanyCache>;
   corporation: CacheByPlanet<CorporationCache>;
   inventionSummary: CacheByPlanet<InventionSummaryCache>;
@@ -178,6 +181,13 @@ export default class ApiFactory {
       })(req, res, next);
     };
 
+    const verifyAdmin = (req: express.Request, res: express.Response, next: any): any => {
+      if (!req.user || !Tycoon.isPrivileged(req.user)) {
+        return res.sendStatus(401);
+      }
+      return next();
+    };
+
     const buildingApi = new BuildingApi(logger, galaxyManager, modelEventClient, caches);
     const companyApi = new CompanyApi(logger, galaxyManager, modelEventClient, caches);
     const corporationApi = new CorporationApi(logger, galaxyManager, modelEventClient, caches);
@@ -201,6 +211,11 @@ export default class ApiFactory {
 
     app.get('/tycoons/:tycoonId', authenticate, verifyPlanet, verifyVisa, tycoonApi.getTycoon());
     app.get('/tycoons/:tycoonId/corporation-ids', authenticate, tycoonApi.getTycoonCorporations());
+    app.get('/tycoons', authenticate, verifyAdmin, tycoonApi.getTycoons());
+    app.put('/tycoons/:tycoonId/role/:roleId', authenticate, verifyAdmin, tycoonApi.setTycoonRole());
+    app.delete('/tycoons/:tycoonId/role/:roleId', authenticate, verifyAdmin, tycoonApi.removeTycoonRole());
+    app.put('/tycoons/:tycoonId/ban', authenticate, verifyAdmin, tycoonApi.setTycoonBan());
+    app.delete('/tycoons/:tycoonId/ban', authenticate, verifyAdmin, tycoonApi.removeTycoonBan());
 
     app.get('/metadata/buildings', authenticate, verifyPlanet, verifyVisa, metadataApi.getBuildings());
     app.get('/metadata/core', authenticate, verifyPlanet, verifyVisa, metadataApi.getCore());
@@ -238,6 +253,7 @@ export default class ApiFactory {
     app.put('/companies/:companyId/inventions/:inventionId', authenticate, verifyPlanet, verifyTycoon, companyApi.researchInvention());
     app.delete('/companies/:companyId/inventions/:inventionId', authenticate, verifyPlanet, verifyTycoon, companyApi.sellInvention());
 
+    app.get('/finances', authenticate, verifyPlanet, verifyAdmin, planetApi.getPlanetFinances());
     app.get('/details', authenticate, verifyPlanet, verifyVisa, planetApi.getPlanetDetails());
     app.get('/online', authenticate, verifyPlanet, verifyVisa, planetApi.getOnline());
     app.get('/overlay/:typeId', authenticate, verifyPlanet, verifyVisa, planetApi.getOverlay());

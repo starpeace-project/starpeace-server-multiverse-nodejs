@@ -120,15 +120,13 @@ export class Employment {
   resourceId: string;
   total: number;
   vacancies: number;
-  spendingPower: number;
   averageWage: number;
   minimumWage: number;
 
-  constructor (resourceId: string, total: number, vacancies: number, spendingPower: number, averageWage: number, minimumWage: number) {
+  constructor (resourceId: string, total: number, vacancies: number, averageWage: number, minimumWage: number) {
     this.resourceId = resourceId;
     this.total = total;
     this.vacancies = vacancies;
-    this.spendingPower = spendingPower;
     this.averageWage = averageWage;
     this.minimumWage = minimumWage;
   }
@@ -138,7 +136,6 @@ export class Employment {
       resourceId: this.resourceId,
       total: this.total,
       vacancies: this.vacancies,
-      spendingPower: this.spendingPower,
       averageWage: this.averageWage,
       minimumWage: this.minimumWage
     };
@@ -149,7 +146,6 @@ export class Employment {
       json.resourceId,
       json.total ?? 0,
       json.vacancies ?? 0,
-      json.spendingPower ?? 0,
       json.averageWage ?? 0,
       json.minimumWage ?? 0
     );

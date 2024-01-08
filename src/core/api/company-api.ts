@@ -74,7 +74,7 @@ export default class CompanyApi {
     return (req: express.Request, res: express.Response) => {
       if (!req.planet || !req.params.townId) return res.sendStatus(400);
       try {
-        const town: Town | null = this.caches.town.withPlanet(req.planet).forId(req.params.townId);
+        const town: Town | undefined = this.caches.town.withPlanet(req.planet).forId(req.params.townId);
         if (!town) return res.sendStatus(404);
 
         const companyCache: CompanyCache = this.caches.company.withPlanetId(req.planet.id);

@@ -80,6 +80,13 @@ export default class ModelEventClient {
       return Tycoon.fromJson(JSON.parse(result.toString()).tycoon);
     }, { throwOnTimeout: true });
   }
+  async updateTycoon (tycoon: Tycoon): Promise<Tycoon> {
+    return await this.requestQueue.add(async () => {
+      await this.requestSocket.send(JSON.stringify({ type: 'TYCOON:UPDATE', tycoon: tycoon.toJson() }));
+      const [result] = await this.requestSocket.receive();
+      return Tycoon.fromJson(JSON.parse(result.toString()).tycoon);
+    }, { throwOnTimeout: true });
+  }
   async tycoon (tycoonId: string): Promise<Tycoon> {
     return await this.requestQueue.add(async () => {
       await this.requestSocket.send(JSON.stringify({ type: 'TYCOON:GET', tycoonId: tycoonId }));

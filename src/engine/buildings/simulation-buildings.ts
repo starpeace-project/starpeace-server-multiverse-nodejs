@@ -15,9 +15,12 @@ import BuildingLaborSettings from '../../building/settings/building-labor-settin
 import BuildingMetrics from '../../building/metrics/building-metrics.js';
 import BuildingServiceSettings from '../../building/settings/building-service-settings.js';
 import Corporation from '../../corporation/corporation.js';
+import Town from '../../planet/town.js';
 
 export interface BuildingSimulationParameters {
   planetTime: DateTime;
+
+  townById: Record<string, Town>;
 
   corporationById: Record<string, Corporation>;
   buildingById: Record<string, Building>;
@@ -60,13 +63,13 @@ export default class SimulationBuildings {
       const price = (resourceType?.price ?? 0) * 2.5;
       const remainingQuantity = Math.min(resource.maxVelocity, Math.max(0, resource.totalQuantity - resource.completedQuantity));
 
-      const cashAvailable: number = finances.corporationCashAvailable(building.corporationId);
+      const cashAvailable: number = building.isIfel ? finances.townCashAvailable(building.townId) : finances.corporationCashAvailable(building.corporationId);
       const maxPurchasableQuantity: number = price <= 0 ? 0 : (cashAvailable / price);
 
       const toPurchase = Math.min(remainingQuantity, maxPurchasableQuantity);
       if (resourceType && toPurchase > 0) {
         const cost = toPurchase * price;
-        finances.adjustBuildingCashflow(building.corporationId, building.companyId, building.id, -cost);
+        finances.adjustBuildingCashflow(building.townId, building.corporationId, building.companyId, building.id, -cost);
 
         resource.mostRecentVelocity = toPurchase;
         resource.mostRecentPrice = price;
@@ -241,16 +244,16 @@ export default class SimulationBuildings {
             const resourceType = this.coreConfigurations.resourceTypeById[labor.resourceId];
             const price = laborSettings?.price ?? ((resourceType?.price ?? 0) * 2.5);
 
-            const cashAvailable: number = parameters.finances.corporationCashAvailable(building.corporationId);
+            const cashAvailable: number = building.isIfel ? parameters.finances.townCashAvailable(building.townId) : parameters.finances.corporationCashAvailable(building.corporationId);
             const maxHirableQuantity: number = price <= 0 ? 0 : (cashAvailable / price);
 
             const toHireQuantity = Math.max(labor.minVelocity ?? 0, Math.min(building.level * labor.maxVelocity, maxHirableQuantity));
             if (toHireQuantity > 0) {
               const cost = toHireQuantity * price;
-              parameters.finances.adjustBuildingCashflow(building.corporationId, building.companyId, building.id, -cost);
+              parameters.finances.adjustBuildingCashflow(building.townId, building.corporationId, building.companyId, building.id, -cost);
             }
 
-            updated = metrics?.updateLabor(labor.resourceId, toHireQuantity, 0) || updated;
+            updated = metrics?.updateLabor(labor.resourceId, toHireQuantity, 0, price) || updated;
           }
         }
         else {

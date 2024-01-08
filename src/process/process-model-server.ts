@@ -237,6 +237,9 @@ process.on('SIGINT', async () => {
 const handleEvent = async (event: SimulationFrame) => {
   planetByPlanet[event.planetId]?.update(event.planet);
 
+  for (const [townId, cash] of Object.entries(event.finances.cashByTownId)) {
+    townByPlanet[event.planetId]?.updateCash(townId, cash);
+  }
   for (const [corporationId, cash] of Object.entries(event.finances.cashByCorporationId)) {
     corporationByPlanet[event.planetId]?.updateCash(corporationId, cash);
   }

@@ -100,7 +100,7 @@ export default class BuildingManager {
     if (isSimulationWithLabor(simulationDefinition)) {
       for (const job of simulationDefinition.labor) {
         const price = this.caches.coreConfigurations[request.planetId]?.resourcePrice(job.resourceId) ?? 0;
-        laborMetricsByResourceId[job.resourceId] = new BuildingLaborMetrics(job.resourceId, 0, 0);
+        laborMetricsByResourceId[job.resourceId] = new BuildingLaborMetrics(job.resourceId, 0, 0, 0);
         laborSettingsByResourceId[job.resourceId] = new BuildingLaborSettings(job.resourceId, price * 1.5);
       }
     }

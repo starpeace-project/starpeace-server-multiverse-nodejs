@@ -15,6 +15,7 @@ import Town from '../../planet/town.js';
 import BuildingSettings, { ConnectionPosture, VALID_CONNECTON_POSTURES } from '../../building/settings/building-settings.js';
 import BuildingCloneSettings from '../../building/settings/building-clone-settings.js';
 import BuildingConnection from '../../building/connections/building-connection.js';
+import Tycoon from '../../tycoon/tycoon.js';
 
 
 export default class BuildingApi {
@@ -404,12 +405,14 @@ export default class BuildingApi {
 
   demolishBuilding (): (req: express.Request, res: express.Response) => any {
     return async (req: express.Request, res: express.Response) => {
-      if (!req.planet || !req.visa || !req.visa.corporationId || !req.params.buildingId) return res.sendStatus(400);
+      if (!req.planet || !req.params.buildingId) return res.sendStatus(400);
+      const isPrivileged = Tycoon.isPrivileged(req.user);
+      if (!isPrivileged && (!req.visa || !req.visa.corporationId)) return res.sendStatus(400);
 
       try {
         const originalBuilding: Building | undefined = this.caches.building.withPlanet(req.planet).forId(req.params.buildingId);
         if (!originalBuilding) return res.sendStatus(404);
-        if (originalBuilding.corporationId !== req.visa.corporationId) return res.sendStatus(403);
+        if (!isPrivileged && originalBuilding.corporationId !== req.visa?.corporationId) return res.sendStatus(403);
 
         if (!!originalBuilding.condemnedAt) {
           return res.json(originalBuilding.toJson());
@@ -471,7 +474,7 @@ export default class BuildingApi {
     return (req: express.Request, res: express.Response) => {
       if (!req.planet) return res.sendStatus(400);
       try {
-        const town: Town | null = this.caches.town.withPlanet(req.planet).forId(req.params.townId);
+        const town: Town | undefined = this.caches.town.withPlanet(req.planet).forId(req.params.townId);
         if (!town) return res.sendStatus(404);
 
         const buildingCache = this.caches.building.withPlanet(req.planet);
