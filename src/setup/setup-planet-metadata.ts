@@ -144,7 +144,7 @@ export default class SetupPlanetMetadata {
       inventions: this.configurations.inventions.map(i => i.toJson())
     }));
 
-    fs.copyFileSync(path.join(__dirname, `../../../node_modules/@starpeace/starpeace-assets/assets/maps/${mapId}.bmp`), `./galaxy/${planetId}/terrain.bmp`);
-    fs.copyFileSync(path.join(__dirname, `../../../node_modules/@starpeace/starpeace-assets/assets/maps/${mapId}.towns.bmp`), `./galaxy/${planetId}/towns.bmp`);
+    fs.copyFileSync(path.join(__dirname, `../../../node_modules/@starpeace/starpeace-assets/assets/maps/${mapId}.png`), `./galaxy/${planetId}/terrain.png`);
+    fs.copyFileSync(path.join(__dirname, `../../../node_modules/@starpeace/starpeace-assets/assets/maps/${mapId}.towns.png`), `./galaxy/${planetId}/towns.png`);
   }
 }

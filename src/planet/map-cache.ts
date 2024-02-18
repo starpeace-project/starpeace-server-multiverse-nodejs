@@ -1,4 +1,4 @@
-import bmp from 'bmp-js';
+import sharp from 'sharp';
 import fs from 'fs-extra';
 
 import { type PlanetMetadata } from '../core/galaxy-manager.js';
@@ -27,9 +27,8 @@ export default class MapCache {
 
   load (): Promise<void> {
     return Utils.withRetries(10, async () => {
-      const terrainData: Uint8Array = bmp.decode(fs.readFileSync(`./galaxy/${this.planetMetadata.id}/terrain.bmp`)).data;
-      const townDecoded = bmp.decode(fs.readFileSync(`./galaxy/${this.planetMetadata.id}/towns.bmp`));
-      const townData: Uint8Array = townDecoded.data;
+      const terrainData: Uint8Array = await sharp(fs.readFileSync(`./galaxy/${this.planetMetadata.id}/terrain.png`)).toFormat('raw').toBuffer();
+      const townData: Uint8Array = await sharp(fs.readFileSync(`./galaxy/${this.planetMetadata.id}/towns.png`)).toFormat('raw').toBuffer();
 
       this.terrainData = new Uint32Array(this.planetMetadata.planetHeight * this.planetMetadata.planetWidth);
       this.townData = new Uint32Array(this.planetMetadata.planetHeight * this.planetMetadata.planetWidth);
